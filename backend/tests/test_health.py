@@ -29,4 +29,3 @@ def test_health_check() -> None:
         "version": __version__,
         "environment": "development",
     }
-

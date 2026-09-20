@@ -1,0 +1,23 @@
+{
+  "project_path": "hidden-threshold-demo",
+  "project_id": "hidden-threshold-demo",
+  "approved": true,
+  "success_contract": {
+    "objective": {
+      "metric": "f1",
+      "direction": "maximize",
+      "minimum_improvement": 0.01
+    },
+    "constraints": [
+      {
+        "metric": "recall",
+        "operator": "gte",
+        "threshold": 0.8
+      }
+    ],
+    "budget": {
+      "max_wall_clock_seconds": 30,
+      "max_experiments": 2
+    }
+  }
+}

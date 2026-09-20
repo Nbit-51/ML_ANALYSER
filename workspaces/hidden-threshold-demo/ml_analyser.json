@@ -1,0 +1,7 @@
+{
+  "adapter": "ml_classification_threshold",
+  "predictions_file": "validation_predictions.csv",
+  "label_column": "label",
+  "score_column": "score",
+  "baseline_threshold": 0.5
+}

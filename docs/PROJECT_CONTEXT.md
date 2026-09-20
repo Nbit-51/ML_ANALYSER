@@ -47,25 +47,29 @@ Examples of later adapters could include data pipelines, inference services, web
 
 ## Current phase
 
-**Phase 0: initialization.**
+**Phase 1: first evidence-loop vertical slice.**
 
-Implemented in this phase:
+Implemented through this phase:
 
 - repository conventions and ignore rules;
 - project and architecture documentation;
-- a minimal FastAPI application with root and health endpoints;
-- basic automated API tests;
-- placeholders for future agent and frontend work.
+- a FastAPI application with health, read-only preview, and approved ML demo endpoints;
+- strict domain models and provider/tool/evidence/persistence ports;
+- explicit run lifecycle transition enforcement;
+- bounded repository inventory and deterministic project state graph construction;
+- a deterministic offline hypothesis provider and dry-run experiment compiler;
+- deterministic objective, guardrail, and multidimensional-budget evaluation;
+- an append-only SQLite evidence ledger and persistent experiment DAG;
+- a narrow classification-threshold adapter and reproducible hidden-failure fixture;
+- automated API, security, persistence, evaluator, and end-to-end tests.
 
 Explicitly not implemented yet:
 
-- agent interfaces or orchestration;
-- project state graph and experiment DAG persistence;
-- model-provider calls;
-- repository ingestion;
-- tool execution;
-- experiment management;
-- persistence;
+- general-purpose command execution or isolated patch application;
+- repository ingestion from remote URLs/uploads;
+- production experiment scheduling and recovery;
+- broad ML training/evaluation adapters;
+- Nebius/Nemotron provider calls;
 - authentication;
 - frontend UI;
 - domain adapters beyond the documented placeholders.
@@ -144,7 +148,6 @@ Planned variables include:
 - `NEBIUS_API_KEY`
 - `NEBIUS_BASE_URL`
 - `NEBIUS_MODEL`
-- `TAVILY_API_KEY` (optional future research integration)
 
 No working credentials, fabricated credentials, or assumed model deployment IDs are included.
 

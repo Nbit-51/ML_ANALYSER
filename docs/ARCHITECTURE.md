@@ -6,7 +6,7 @@ ML Analyser is designed as a closed-loop, evidence-driven optimization system. I
 
 The architecture separates HTTP transport, domain-neutral orchestration, project understanding, domain adapters, inference providers, guarded execution, evaluation, persistence, and presentation. ML is the flagship adapter; the core vocabulary is goal, metric, constraint, hypothesis, experiment, observation, and decision.
 
-Only the FastAPI shell exists today. The remaining components in this document are planned and must not be presented as implemented.
+The first vertical slice now implements strict domain contracts, lifecycle transitions, bounded inventory, a deterministic project state graph, a local mock provider, dry-run experiment compilation, deterministic decision rules, SQLite evidence/DAG persistence, and a narrow ML threshold-calibration demo. General command execution, reversible patch application, broad domain adapters, external inference, and the frontend remain planned and must not be presented as implemented.
 
 ## System context
 
@@ -278,4 +278,3 @@ The current test suite covers the minimal HTTP surface. Agent behavior will be a
 ## Deployment direction
 
 Packaging and deployment will be selected after the first vertical slice. A production deployment should separate the web/API process from resource-intensive experiment execution, use managed secrets, persist run state outside process memory, and support cancellation and recovery. Nebius infrastructure is the intended hackathon deployment target.
-

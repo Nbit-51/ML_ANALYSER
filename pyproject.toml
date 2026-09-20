@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ml-analyser"
-version = "0.1.0"
+version = "0.2.0"
 description = "Evidence-driven autonomous ML experiment engineer"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -34,6 +34,7 @@ testpaths = ["backend/tests"]
 
 [tool.ruff]
 line-length = 100
+src = ["backend"]
 target-version = "py311"
 
 [tool.ruff.lint]

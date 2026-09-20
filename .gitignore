@@ -28,13 +28,12 @@ Thumbs.db
 
 # Runtime data and generated artifacts
 artifacts/*
-!artifacts/.gitkeep
 workspaces/*
-!workspaces/.gitkeep
+!workspaces/hidden-threshold-demo/
+!workspaces/hidden-threshold-demo/**
 *.log
 
 # Frontend (planned)
 node_modules/
 .next/
 out/
-

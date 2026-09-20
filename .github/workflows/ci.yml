@@ -29,9 +29,11 @@ jobs:
       - name: Lint
         run: python -m ruff check .
 
+      - name: Check formatting
+        run: python -m ruff format --check backend
+
       - name: Type check
         run: python -m mypy backend/ml_analyser
 
       - name: Test
-        run: python -m pytest
-
+        run: python -m pytest --cov=ml_analyser --cov-report=term-missing --cov-fail-under=90

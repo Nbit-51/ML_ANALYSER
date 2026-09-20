@@ -30,4 +30,3 @@ async def health_check() -> HealthResponse:
         version=__version__,
         environment=settings.environment,
     )
-

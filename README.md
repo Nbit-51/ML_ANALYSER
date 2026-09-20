@@ -6,7 +6,25 @@ ML Analyser is an autonomous evidence-driven optimization agent being built for 
 
 It is designed to diagnose technical failures, turn explanations into falsifiable hypotheses, compile the smallest useful controlled experiments, execute them safely, and retain only changes supported by recorded evidence. The hackathon MVP goes deepest on ML experimentation.
 
-> Status: project initialization. The repository currently contains documentation and a minimal FastAPI service. The agent runtime, model providers, tools, frontend, and experiment runner are planned work and are not represented as complete.
+> Status: first evidence-loop vertical slice. The repository includes typed agent contracts, bounded repository inventory, a project state graph, deterministic mock reasoning, experiment specifications, deterministic decision logic, SQLite evidence/DAG persistence, and a narrow end-to-end ML threshold-calibration demo. General command execution, broad ML training support, external inference, and the frontend remain planned.
+
+## What works today
+
+- `POST /api/v1/runs/preview` inventories a project inside `workspaces/`, builds its state graph, proposes deterministic falsifiable hypotheses, and compiles non-executed experiment specifications.
+- `POST /api/v1/runs/ml-threshold-demo` requires explicit approval, measures saved binary-classification predictions, performs a deterministic threshold sweep, evaluates the objective, recall guardrail, and budget, then persists evidence and experiment lineage to SQLite.
+- The lifecycle rejects illegal stage transitions, unknown schema fields are rejected, project paths cannot escape the configured workspace, and preview mode never imports or executes target repository code.
+- The mock provider is deterministic and offline. Nebius/Nemotron is not silently simulated.
+
+The included hidden-failure fixture proves the loop on a deliberately miscalibrated classifier:
+
+| Measurement | Baseline (`0.5`) | Candidate (`0.595`) |
+| --- | ---: | ---: |
+| F1 | 0.7692 | 0.9091 |
+| Precision | 0.6250 | 0.8333 |
+| Recall | 1.0000 | 1.0000 |
+| Accuracy | 0.7000 | 0.9000 |
+
+The candidate passes the `F1 +0.01` objective, `recall >= 0.8` guardrail, and configured experiment budget. These values are computed from the committed validation-prediction fixture; they are not model-generated claims.
 
 ## The problem
 
@@ -138,7 +156,7 @@ Model provider   Guarded runner ---- Objective/guardrail evaluator
              Isolated workspace / compute
 ```
 
-See [Architecture](docs/ARCHITECTURE.md) for component boundaries, run states, safety rules, and the intended data model. See [Project context](docs/PROJECT_CONTEXT.md) for constraints and current decisions.
+See [Architecture](docs/ARCHITECTURE.md) for component boundaries, run states, safety rules, and the intended data model. See [Project context](docs/PROJECT_CONTEXT.md) for constraints and current decisions, and [Demo guide](docs/DEMO_GUIDE.md) for the reproducible judge-facing walkthrough.
 
 ## Technology stack
 
@@ -172,20 +190,21 @@ No API credentials belong in this repository. `.env.example` contains variable n
 .
 |-- backend/
 |   |-- ml_analyser/
-|   |   |-- agent/          # Placeholder for a later milestone
+|   |   |-- adapters/       # Domain measurement adapters
+|   |   |-- agent/          # Models, ports, lifecycle, evaluator, orchestration
 |   |   |-- api/routes/     # HTTP route modules
 |   |   |-- core/           # Configuration and cross-cutting concerns
+|   |   |-- persistence/    # SQLite evidence ledger and experiment DAG
+|   |   |-- tools/          # Bounded read-only repository tools
 |   |   `-- main.py         # FastAPI application factory
 |   `-- tests/              # Backend tests
 |-- docs/
 |   |-- ARCHITECTURE.md
 |   `-- PROJECT_CONTEXT.md
-|-- frontend/               # Frontend placeholder; not implemented yet
-|-- artifacts/              # Generated outputs (ignored except placeholder)
-|-- workspaces/             # Local project workspaces (ignored except placeholder)
+|-- workspaces/
+|   `-- hidden-threshold-demo/ # Committed deterministic demo fixture
 |-- .github/workflows/ci.yml
 |-- .env.example
-|-- AGENTS.md
 `-- pyproject.toml
 ```
 
@@ -229,13 +248,28 @@ Then open:
 - health check: <http://127.0.0.1:8000/api/v1/health>
 - OpenAPI UI: <http://127.0.0.1:8000/docs>
 
+### Run the hidden-failure demonstration
+
+With the API running, execute:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/runs/ml-threshold-demo \
+  -H "Content-Type: application/json" \
+  --data @workspaces/hidden-threshold-demo/request.json
+```
+
+The JSON response contains the hypothesis, baseline and candidate confusion matrices, exact metrics, state history, evidence records, experiment parentage, deterministic decision, and recommendation. Evidence and DAG nodes are also written to the ignored local database configured by `ML_ANALYSER_STATE_DATABASE`.
+
 ### Quality checks
 
 ```bash
 pytest
 ruff check .
+ruff format --check backend
 mypy backend/ml_analyser
 ```
+
+CI additionally enforces at least 90% backend statement coverage.
 
 ## Roadmap
 
@@ -243,14 +277,16 @@ mypy backend/ml_analyser
 - [x] Document project context and target architecture.
 - [x] Add a minimal, tested FastAPI service.
 - [x] Add CI for tests, linting, and type checking.
-- [ ] Define typed agent, model-provider, tool, evidence, and run-state interfaces.
-- [ ] Add a deterministic local/mock model provider.
-- [ ] Implement repository inventory and the project state graph.
-- [ ] Implement falsifiable hypothesis and experiment-compiler schemas.
-- [ ] Implement explicit approval, execution, measurement, and decision stages.
-- [ ] Add the evidence ledger and persistent experiment DAG.
-- [ ] Add objective, regression-guardrail, and compute-budget evaluation.
+- [x] Define typed agent, model-provider, tool, evidence, and run-state interfaces.
+- [x] Add a deterministic local/mock model provider.
+- [x] Implement bounded repository inventory and a deterministic project state graph.
+- [x] Implement falsifiable hypothesis and experiment-compiler schemas.
+- [x] Add explicit lifecycle stages and a bounded approved ML measurement path.
+- [ ] Generalize approval and execution beyond the bounded data-only adapter.
+- [x] Add the SQLite evidence ledger and persistent experiment DAG.
+- [x] Add objective, regression-guardrail, and compute-budget evaluation.
 - [ ] Add reversible change handling: isolate, measure, keep or revert.
+- [x] Add a deterministic threshold-calibration adapter and hidden-failure demo.
 - [ ] Complete the ML adapter and an end-to-end hidden-failure demo.
 - [ ] Add a smaller backend benchmark adapter to prove core generality.
 - [ ] Prototype AI-agent evaluation if core milestones are complete.
