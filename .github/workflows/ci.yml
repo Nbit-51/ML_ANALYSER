@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install project
+        run: python -m pip install -e ".[dev]"
+
+      - name: Lint
+        run: python -m ruff check .
+
+      - name: Type check
+        run: python -m mypy backend/ml_analyser
+
+      - name: Test
+        run: python -m pytest
+

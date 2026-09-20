@@ -1,0 +1,40 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.python-version
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+*.egg-info/
+build/
+dist/
+
+# Editors and operating systems
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Runtime data and generated artifacts
+artifacts/*
+!artifacts/.gitkeep
+workspaces/*
+!workspaces/.gitkeep
+*.log
+
+# Frontend (planned)
+node_modules/
+.next/
+out/
+
