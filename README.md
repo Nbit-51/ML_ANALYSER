@@ -6,14 +6,17 @@ ML Analyser is an autonomous evidence-driven optimization agent being built for 
 
 It is designed to diagnose technical failures, turn explanations into falsifiable hypotheses, compile the smallest useful controlled experiments, execute them safely, and retain only changes supported by recorded evidence. The hackathon MVP goes deepest on ML experimentation.
 
-> Status: first evidence-loop vertical slice. The repository includes typed agent contracts, bounded repository inventory, a project state graph, deterministic mock reasoning, experiment specifications, deterministic decision logic, SQLite evidence/DAG persistence, and a narrow end-to-end ML threshold-calibration demo. General command execution, broad ML training support, external inference, and the frontend remain planned.
+> Status: two tested evidence-loop vertical slices. The ML demo verifies threshold calibration from saved predictions. The backend demo adds fingerprint-bound, single-use approval; isolated baseline/candidate execution; real localhost measurement; deterministic retain/discard decisions; and persistent evidence. A Nebius Token Factory provider is implemented and contract-tested, but live Nemotron inference remains unverified until credentials and a current model ID are supplied.
 
 ## What works today
 
 - `POST /api/v1/runs/preview` inventories a project inside `workspaces/`, builds its state graph, proposes deterministic falsifiable hypotheses, and compiles non-executed experiment specifications.
 - `POST /api/v1/runs/ml-threshold-demo` requires explicit approval, measures saved binary-classification predictions, performs a deterministic threshold sweep, evaluates the objective, recall guardrail, and budget, then persists evidence and experiment lineage to SQLite.
+- `POST /api/v1/runs/backend-benchmark/prepare` creates a complete experiment plan and a persisted approval bound to the plan's canonical fingerprint.
+- `POST /api/v1/runs/approvals/{approval_id}` approves or rejects exactly one pending scope. An approved scope is single-use; changed plans and replay attempts are rejected.
+- `POST /api/v1/runs/backend-benchmark/execute` copies the source into isolated baseline and candidate workspaces, applies only manifest-declared JSON overrides, runs a bounded localhost benchmark, evaluates objective/guardrails/budget, and retains or discards the candidate without modifying the source.
 - The lifecycle rejects illegal stage transitions, unknown schema fields are rejected, project paths cannot escape the configured workspace, and preview mode never imports or executes target repository code.
-- The mock provider is deterministic and offline. Nebius/Nemotron is not silently simulated.
+- The mock provider is deterministic and offline. The real Nebius provider is disabled by default, requests structured JSON, and rejects malformed or ungrounded responses. Nebius/Nemotron is never silently simulated.
 
 The included hidden-failure fixture proves the loop on a deliberately miscalibrated classifier:
 
@@ -25,6 +28,8 @@ The included hidden-failure fixture proves the loop on a deliberately miscalibra
 | Accuracy | 0.7000 | 0.9000 |
 
 The candidate passes the `F1 +0.01` objective, `recall >= 0.8` guardrail, and configured experiment budget. These values are computed from the committed validation-prediction fixture; they are not model-generated claims.
+
+The backend fixture provides a second, non-ML proof. In the final local validation on September 21, 2026, P95 latency improved from **50.23 ms** to **22.12 ms**, error rate remained `0`, and baseline/candidate response hashes were identical. The accepted candidate was retained in an isolated workspace and the original project was unchanged. Latency varies by host, so automated tests assert the contract (`candidate P95 < 40 ms` and improvement `> 10 ms`) rather than this one observed value.
 
 ## The problem
 
@@ -73,7 +78,7 @@ The same core loop can optimize different measurable systems through adapters:
 
 The project will not claim to improve every codebase. The core engine owns verification and experimental lineage; each adapter must explicitly define what can be observed, changed, measured, and compared in its domain.
 
-## Planned agent workflow
+## Agent workflow
 
 ```text
 Repository + previous runs
@@ -131,7 +136,7 @@ Experiments are nodes, not chat messages. Each node will reference its parent ex
 
 ## Architecture
 
-The planned system has six major components:
+The system is organized around six major components:
 
 - **Web application:** a clean, demo-friendly frontend for project intake, run progress, findings, experiment comparisons, and the final report.
 - **FastAPI service:** request validation, run lifecycle APIs, artifact access, and streaming/status endpoints.
@@ -168,19 +173,19 @@ Current foundation:
 - Uvicorn
 - Pytest and HTTPX
 - Ruff and mypy
+- SQLite evidence, approval, and experiment-DAG persistence
+- Isolated local workspaces and a bounded HTTP benchmark adapter
 
 Planned additions:
 
 - a minimal recruiter-friendly web frontend (framework to be selected when frontend work begins);
-- durable run/evidence persistence;
-- isolated tool execution for repository analysis and experiments;
 - structured tracing and streaming progress updates.
 
-## Planned Nebius and NVIDIA integration
+## Nebius and NVIDIA integration
 
-The primary reasoning provider will target an **NVIDIA Nemotron open-source model served through Nebius Token Factory**. The exact model identifier and deployment settings will be configured only after API access is available and validated; they are intentionally not hard-coded today. Nemotron will support structured diagnosis, skeptical review, experiment planning, and decision review, while deterministic code enforces schemas, budgets, policies, and acceptance rules.
+The primary reasoning provider targets an **NVIDIA Nemotron open-source model served through Nebius Token Factory**. The exact model identifier is selected through `NEBIUS_MODEL` after API access is available and the live Token Factory model list is checked; it is intentionally not guessed or hard-coded. Nemotron supports structured diagnosis and experiment planning, while deterministic code enforces schemas, evidence references, budgets, policies, and acceptance rules.
 
-The provider boundary will keep orchestration independent from any one inference API. A local/mock provider will be implemented first so the full state machine can be tested deterministically. The Nebius provider will then map structured agent requests to Token Factory, use environment-based credentials, preserve relevant request/response metadata, and expose provider failures without inventing completions.
+The provider boundary keeps orchestration independent from any one inference API. The implemented Token Factory adapter follows the official [Token Factory quickstart](https://docs.tokenfactory.nebius.com/quickstart) and [structured-output guide](https://docs.tokenfactory.nebius.com/ai-models-inference/json): it calls the OpenAI-compatible chat-completions endpoint, requests JSON-schema output, uses environment-based credentials, and exposes configuration, transport, and validation failures without inventing completions. Contract tests use HTTPX's in-memory transport, so they require no secret or paid request. Live provider validation remains a clearly tracked next step.
 
 No API credentials belong in this repository. `.env.example` contains variable names only; local values should be stored in an ignored `.env` file or a deployment secret manager.
 
@@ -194,15 +199,19 @@ No API credentials belong in this repository. `.env.example` contains variable n
 |   |   |-- agent/          # Models, ports, lifecycle, evaluator, orchestration
 |   |   |-- api/routes/     # HTTP route modules
 |   |   |-- core/           # Configuration and cross-cutting concerns
+|   |   |-- execution/      # Isolated candidate workspace lifecycle
 |   |   |-- persistence/    # SQLite evidence ledger and experiment DAG
 |   |   |-- tools/          # Bounded read-only repository tools
 |   |   `-- main.py         # FastAPI application factory
-|   `-- tests/              # Backend tests
+|   `-- tests/              # Unit, contract, API, and integration tests
 |-- docs/
 |   |-- ARCHITECTURE.md
+|   |-- BACKEND_BENCHMARK_DEMO.md
+|   |-- DEMO_GUIDE.md
 |   `-- PROJECT_CONTEXT.md
 |-- workspaces/
-|   `-- hidden-threshold-demo/ # Committed deterministic demo fixture
+|   |-- hidden-threshold-demo/ # Committed deterministic ML fixture
+|   `-- backend-benchmark-demo/ # Committed localhost benchmark fixture
 |-- .github/workflows/ci.yml
 |-- .env.example
 `-- pyproject.toml
@@ -234,7 +243,7 @@ source .venv/bin/activate
 cp .env.example .env
 ```
 
-No external credentials are needed for the current health-check service.
+No external credentials are needed when `ML_ANALYSER_MODEL_PROVIDER=mock`, which is the default. For live Token Factory reasoning, set `ML_ANALYSER_MODEL_PROVIDER=nebius`, `NEBIUS_API_KEY`, and a currently available NVIDIA Nemotron identifier in `NEBIUS_MODEL`. Never commit the local `.env` file.
 
 ### Run the API
 
@@ -260,6 +269,10 @@ curl -X POST http://127.0.0.1:8000/api/v1/runs/ml-threshold-demo \
 
 The JSON response contains the hypothesis, baseline and candidate confusion matrices, exact metrics, state history, evidence records, experiment parentage, deterministic decision, and recommendation. Evidence and DAG nodes are also written to the ignored local database configured by `ML_ANALYSER_STATE_DATABASE`.
 
+### Run the backend benchmark demonstration
+
+The backend proof deliberately uses separate prepare, approve, and execute calls so a reviewer can inspect the complete scope before granting execution. See [Backend benchmark demo](docs/BACKEND_BENCHMARK_DEMO.md) for PowerShell and API examples plus the measured result.
+
 ### Quality checks
 
 ```bash
@@ -281,16 +294,16 @@ CI additionally enforces at least 90% backend statement coverage.
 - [x] Add a deterministic local/mock model provider.
 - [x] Implement bounded repository inventory and a deterministic project state graph.
 - [x] Implement falsifiable hypothesis and experiment-compiler schemas.
-- [x] Add explicit lifecycle stages and a bounded approved ML measurement path.
-- [ ] Generalize approval and execution beyond the bounded data-only adapter.
+- [x] Add explicit lifecycle stages and bounded approved measurement paths.
+- [x] Generalize persisted, fingerprint-bound, single-use approval to an executable backend adapter.
 - [x] Add the SQLite evidence ledger and persistent experiment DAG.
 - [x] Add objective, regression-guardrail, and compute-budget evaluation.
-- [ ] Add reversible change handling: isolate, measure, keep or revert.
+- [x] Add reversible local change handling: isolate, measure, retain or discard.
 - [x] Add a deterministic threshold-calibration adapter and hidden-failure demo.
 - [ ] Complete the ML adapter and an end-to-end hidden-failure demo.
-- [ ] Add a smaller backend benchmark adapter to prove core generality.
+- [x] Add a smaller backend benchmark adapter to prove core generality.
 - [ ] Prototype AI-agent evaluation if core milestones are complete.
-- [ ] Integrate NVIDIA Nemotron through Nebius Token Factory.
+- [ ] Live-validate NVIDIA Nemotron through the implemented Nebius Token Factory provider.
 - [ ] Build the frontend and real-time run view.
 - [ ] Create an end-to-end demonstration on a representative ML repository.
 - [ ] Add deployment guidance, observability, security review, and Devpost materials.

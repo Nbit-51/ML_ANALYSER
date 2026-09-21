@@ -5,9 +5,15 @@ from __future__ import annotations
 import sqlite3
 from collections.abc import Iterator
 from contextlib import contextmanager
+from datetime import UTC, datetime
 from pathlib import Path
 
-from ml_analyser.agent.models import EvidenceRecord, ExperimentSpec
+from ml_analyser.agent.models import (
+    ApprovalRecord,
+    ApprovalStatus,
+    EvidenceRecord,
+    ExperimentSpec,
+)
 
 
 class DuplicateRecordError(ValueError):
@@ -16,6 +22,14 @@ class DuplicateRecordError(ValueError):
 
 class UnknownParentExperimentError(ValueError):
     """Raised when a DAG node references a missing parent in the same run."""
+
+
+class UnknownApprovalError(ValueError):
+    """Raised when an approval identifier does not exist."""
+
+
+class InvalidApprovalTransitionError(ValueError):
+    """Raised when an approval cannot move to the requested status."""
 
 
 class SQLiteRunStore:
@@ -107,6 +121,94 @@ class SQLiteRunStore:
             ).fetchall()
         return [ExperimentSpec.model_validate_json(row[0]) for row in rows]
 
+    def create_approval(self, approval: ApprovalRecord) -> None:
+        try:
+            with self._connect() as connection:
+                connection.execute(
+                    """
+                    INSERT INTO approvals (approval_id, payload)
+                    VALUES (?, ?)
+                    """,
+                    (approval.id, approval.model_dump_json()),
+                )
+        except sqlite3.IntegrityError as error:
+            raise DuplicateRecordError(f"approval '{approval.id}' already exists") from error
+
+    def get_approval(self, approval_id: str) -> ApprovalRecord | None:
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT payload FROM approvals WHERE approval_id = ?",
+                (approval_id,),
+            ).fetchone()
+        return None if row is None else ApprovalRecord.model_validate_json(row[0])
+
+    def decide_approval(
+        self,
+        approval_id: str,
+        *,
+        status: ApprovalStatus,
+        reason: str | None,
+    ) -> ApprovalRecord:
+        if status not in {ApprovalStatus.APPROVED, ApprovalStatus.REJECTED}:
+            raise InvalidApprovalTransitionError("decision must be approved or rejected")
+
+        approval = self.get_approval(approval_id)
+        if approval is None:
+            raise UnknownApprovalError(f"approval '{approval_id}' does not exist")
+        if approval.status is not ApprovalStatus.PENDING:
+            raise InvalidApprovalTransitionError(
+                f"approval '{approval_id}' is already {approval.status.value}"
+            )
+
+        decided = approval.model_copy(
+            update={
+                "status": status,
+                "decided_at": datetime.now(UTC),
+                "reason": reason,
+            }
+        )
+        with self._connect() as connection:
+            cursor = connection.execute(
+                """
+                UPDATE approvals
+                SET payload = ?
+                WHERE approval_id = ? AND payload = ?
+                """,
+                (decided.model_dump_json(), approval_id, approval.model_dump_json()),
+            )
+            if cursor.rowcount != 1:
+                raise InvalidApprovalTransitionError(
+                    f"approval '{approval_id}' changed concurrently"
+                )
+        return decided
+
+    def consume_approval(self, approval_id: str, scope_fingerprint: str) -> ApprovalRecord:
+        approval = self.get_approval(approval_id)
+        if approval is None:
+            raise UnknownApprovalError(f"approval '{approval_id}' does not exist")
+        if approval.scope_fingerprint != scope_fingerprint:
+            raise InvalidApprovalTransitionError("approved scope fingerprint does not match")
+        if approval.status is not ApprovalStatus.APPROVED:
+            raise InvalidApprovalTransitionError(
+                f"approval '{approval_id}' is {approval.status.value}, not approved"
+            )
+
+        consumed = approval.model_copy(update={"status": ApprovalStatus.CONSUMED})
+        with self._connect() as connection:
+            cursor = connection.execute(
+                """
+                UPDATE approvals
+                SET payload = ?
+                WHERE approval_id = ? AND payload = ?
+                """,
+                (consumed.model_dump_json(), approval_id, approval.model_dump_json()),
+            )
+            if cursor.rowcount != 1:
+                raise InvalidApprovalTransitionError(
+                    f"approval '{approval_id}' changed concurrently"
+                )
+        return consumed
+
     @contextmanager
     def _connect(self) -> Iterator[sqlite3.Connection]:
         connection = sqlite3.connect(self._database_path)
@@ -148,5 +250,10 @@ class SQLiteRunStore:
 
                 CREATE INDEX IF NOT EXISTS experiment_run_sequence
                     ON experiments (run_id, sequence);
+
+                CREATE TABLE IF NOT EXISTS approvals (
+                    approval_id TEXT PRIMARY KEY,
+                    payload TEXT NOT NULL
+                );
                 """
             )

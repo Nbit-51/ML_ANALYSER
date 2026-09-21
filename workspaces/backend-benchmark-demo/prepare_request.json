@@ -1,0 +1,28 @@
+{
+  "project_path": "backend-benchmark-demo",
+  "project_id": "backend-benchmark-demo",
+  "success_contract": {
+    "objective": {
+      "metric": "p95_latency_ms",
+      "direction": "minimize",
+      "target": 40.0,
+      "minimum_improvement": 10.0
+    },
+    "constraints": [
+      {
+        "metric": "error_rate",
+        "operator": "lte",
+        "threshold": 0.0
+      },
+      {
+        "metric": "response_hash_matches",
+        "operator": "eq",
+        "threshold": 1.0
+      }
+    ],
+    "budget": {
+      "max_wall_clock_seconds": 10,
+      "max_experiments": 1
+    }
+  }
+}

@@ -9,6 +9,8 @@ from pydantic import BaseModel
 
 from ml_analyser.agent.models import (
     AnalysisContext,
+    ApprovalRecord,
+    ApprovalStatus,
     EvidenceRecord,
     ExperimentSpec,
     Hypothesis,
@@ -58,6 +60,24 @@ class ExperimentDagStore(Protocol):
     def add_experiment(self, run_id: str, experiment: ExperimentSpec) -> None: ...
 
     def list_experiments(self, run_id: str) -> Sequence[ExperimentSpec]: ...
+
+
+class ApprovalStore(Protocol):
+    """Persistent single-use execution approval port."""
+
+    def create_approval(self, approval: ApprovalRecord) -> None: ...
+
+    def get_approval(self, approval_id: str) -> ApprovalRecord | None: ...
+
+    def decide_approval(
+        self,
+        approval_id: str,
+        *,
+        status: ApprovalStatus,
+        reason: str | None,
+    ) -> ApprovalRecord: ...
+
+    def consume_approval(self, approval_id: str, scope_fingerprint: str) -> ApprovalRecord: ...
 
 
 class ToolRequest(BaseModel):

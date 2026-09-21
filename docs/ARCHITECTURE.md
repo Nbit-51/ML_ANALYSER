@@ -6,7 +6,7 @@ ML Analyser is designed as a closed-loop, evidence-driven optimization system. I
 
 The architecture separates HTTP transport, domain-neutral orchestration, project understanding, domain adapters, inference providers, guarded execution, evaluation, persistence, and presentation. ML is the flagship adapter; the core vocabulary is goal, metric, constraint, hypothesis, experiment, observation, and decision.
 
-The first vertical slice now implements strict domain contracts, lifecycle transitions, bounded inventory, a deterministic project state graph, a local mock provider, dry-run experiment compilation, deterministic decision rules, SQLite evidence/DAG persistence, and a narrow ML threshold-calibration demo. General command execution, reversible patch application, broad domain adapters, external inference, and the frontend remain planned and must not be presented as implemented.
+Two vertical slices are implemented. The ML path performs a bounded threshold experiment over saved predictions. The backend path performs persisted fingerprint-bound approval, isolated baseline/candidate execution, localhost measurement, deterministic evaluation, and candidate retain/discard. A real Token Factory provider is implemented behind configuration and contract-tested without credentials. Live Nemotron validation, arbitrary command execution, broad ML training, promotion of retained candidates, and the frontend remain planned and must not be presented as implemented.
 
 ## System context
 
@@ -43,7 +43,7 @@ Domain adapters prevent “works on everything” from becoming an unsupported c
 | Adapter | Hackathon scope | Measurements |
 | --- | --- | --- |
 | ML | Fully functional flagship | F1/AP/loss, latency, VRAM, model size, training evidence |
-| General software benchmark | Smaller functional proof | P50/P95, throughput, tests, memory, CPU, errors |
+| Backend HTTP benchmark | Functional proof | P50/P95/mean latency, throughput, errors, response integrity |
 | AI-agent evaluation | Prototype/stretch | Task success, evaluator score, latency, token cost |
 
 An adapter defines discovery rules, allowed interventions, measurement tools, comparison semantics, and compatibility checks. The core engine remains unaware of whether a metric is F1 or P95 latency.
@@ -59,18 +59,18 @@ Responsibilities:
 - expose progress, hypotheses, evidence, experiment lineage, budgets, and reports;
 - map domain errors to stable HTTP responses.
 
-The API layer must not contain decision logic or issue arbitrary shell commands. The current implementation exposes only a service root and versioned health check.
+The API layer contains no decision logic and issues no arbitrary shell commands. It exposes service/health routes, read-only preview, the ML demo, and the three-stage backend prepare/approve/execute workflow.
 
-### Application services (planned)
+### Application services
 
 Responsibilities:
 
 - coordinate repository intake and run lifecycle operations;
 - enforce legal run-state transitions;
 - invoke the agent runtime, adapter, and persistence ports;
-- provide cancellation, approvals, and status updates.
+- provide approvals and status updates; cancellation remains planned.
 
-### Success contract (planned)
+### Success contract
 
 Each run begins with a validated contract containing:
 
@@ -81,7 +81,7 @@ Each run begins with a validated contract containing:
 
 Missing measurements cannot pass a constraint. Estimates and observations must remain separate fields.
 
-### Agent runtime (planned)
+### Agent runtime
 
 The orchestrator will be a state machine, not a free-form chat loop:
 
@@ -108,16 +108,16 @@ Core responsibilities:
 - keep or revert the provisional change and select the next experiment;
 - generate a report from durable state.
 
-### Model provider port (planned)
+### Model provider port
 
-The runtime will depend on a small interface accepting structured messages and response schemas. Implementations are expected for:
+The runtime depends on a small typed interface. Implementations now include:
 
 - a deterministic local/mock provider for tests and offline development;
-- NVIDIA Nemotron through Nebius Token Factory for the hackathon path.
+- an OpenAI-compatible Nebius Token Factory adapter intended for an NVIDIA Nemotron model selected at deployment time.
 
 For an expensive action, Nemotron may provide structured diagnostic, skeptic, experiment-planner, and judge perspectives. These are workflow responsibilities, not necessarily separately deployed agents. Deterministic application code retains final authority over schemas, budgets, policy, and pass/fail decisions.
 
-Provider adapters own authentication, endpoint details, timeouts, retry classification, and relevant usage metadata. They must surface errors and never substitute fabricated output.
+The Token Factory adapter owns authentication, HTTPS endpoint details, timeout handling, JSON-schema requests, response validation, and evidence/metric grounding. Retry policy and usage persistence remain planned. Provider failures surface explicitly and never substitute fabricated output.
 
 ### Project state graph (planned)
 
@@ -160,13 +160,13 @@ The selector ranks valid candidate experiments using interpretable factors:
 
 A cheap diagnostic can outrank a more promising but expensive change when it eliminates more uncertainty per unit cost. Initial heuristics should remain auditable; more complex optimization is unnecessary until evaluation data justifies it.
 
-### Tool registry and guarded runner (planned)
+### Tool registry and guarded runner
 
 Tools have typed input/output schemas and declared capabilities. Early tools may include repository inventory, targeted search, dependency/config inspection, tests, linters, log and metric parsers, benchmarks, and narrowly scoped training/evaluation commands.
 
-The runner validates each request, executes it in an isolated project workspace, enforces time and resource limits, captures stdout/stderr and exit status, and records generated artifacts. A candidate patch is provisional: a rejected, invalid, failed, or inconclusive experiment does not modify the accepted project state.
+The backend adapter implements the first narrow runner: it copies the project, rejects symlinks, launches only the current Python interpreter with isolation mode and no shell, binds to localhost, enforces request/startup/process timeouts, allowlists environment variables, and bounds output. This is not an OS/container sandbox. A candidate is provisional: accepted candidates remain isolated for later promotion, while rejected candidates are discarded and the source remains untouched.
 
-### Evaluator and decision policy (planned)
+### Evaluator and decision policy
 
 The evaluator checks measurement compatibility before comparison. A decision can be:
 
@@ -176,7 +176,7 @@ The evaluator checks measurement compatibility before comparison. A decision can
 
 Passing tests is a guardrail, not proof that the objective improved. Decision records include before/after values, deltas, tolerances, constraint status, and links to raw evidence.
 
-### Evidence ledger and experiment DAG (planned)
+### Evidence ledger and experiment DAG
 
 Every material conclusion references evidence. Experiments form a directed acyclic graph, not a linear chat transcript:
 
@@ -259,6 +259,11 @@ Current endpoints:
 | --- | --- | --- |
 | `GET` | `/` | Service identity and documentation link. |
 | `GET` | `/api/v1/health` | Process health and version. |
+| `POST` | `/api/v1/runs/preview` | Read-only inventory, graph, hypotheses, and dry-run experiments. |
+| `POST` | `/api/v1/runs/ml-threshold-demo` | Approved bounded ML measurement path. |
+| `POST` | `/api/v1/runs/backend-benchmark/prepare` | Persist an exact backend plan and pending approval. |
+| `POST` | `/api/v1/runs/approvals/{approval_id}` | Approve or reject one fingerprinted scope. |
+| `POST` | `/api/v1/runs/backend-benchmark/execute` | Consume approval and benchmark isolated baseline/candidate copies. |
 
 ## Observability (planned)
 
@@ -273,7 +278,7 @@ Use structured logs with run, stage, experiment, tool-call, adapter, and provide
 - **Decision tests:** known baselines/candidates covering accept, reject, inconclusive, and revert behavior.
 - **End-to-end tests:** deployed ML demo plus a smaller software benchmark path.
 
-The current test suite covers the minimal HTTP surface. Agent behavior will be added only when its interfaces exist.
+The current suite contains 38 unit, provider-contract, API, persistence, safety, decision, and end-to-end tests. CI enforces formatting, linting, strict type checking, and at least 90% statement coverage.
 
 ## Deployment direction
 

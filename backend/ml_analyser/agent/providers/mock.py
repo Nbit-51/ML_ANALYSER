@@ -92,4 +92,39 @@ class DeterministicMockProvider:
                 )
             )
 
+        has_backend_manifest = any(path.endswith("backend_benchmark.json") for path in paths)
+        if has_backend_manifest:
+            hypotheses.append(
+                Hypothesis(
+                    id=stable_id(
+                        "hypothesis", context.project_id, "backend-benchmark", objective.metric
+                    ),
+                    kind=HypothesisKind.OPTIMIZATION,
+                    statement=(
+                        f"The manifest-declared backend configuration change may improve "
+                        f"'{objective.metric}' without violating response-integrity guardrails."
+                    ),
+                    rationale=(
+                        "A controlled baseline/candidate benchmark can verify the measurable "
+                        "effect before any accepted project state is changed."
+                    ),
+                    proposed_intervention=(
+                        "Apply only the manifest-declared configuration overrides in an isolated "
+                        "candidate workspace and benchmark both copies with the same localhost "
+                        "request procedure."
+                    ),
+                    expected_outcome=MetricExpectation(
+                        metric=objective.metric,
+                        direction=objective.direction,
+                        minimum_delta=objective.minimum_improvement,
+                    ),
+                    rejection_criteria=(
+                        "Reject if the objective fails, any guardrail fails, the response changes, "
+                        "or the observed resource usage exceeds budget."
+                    ),
+                    evidence_ids=[evidence_id],
+                    priority=90,
+                )
+            )
+
         return hypotheses

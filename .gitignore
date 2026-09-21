@@ -31,6 +31,8 @@ artifacts/*
 workspaces/*
 !workspaces/hidden-threshold-demo/
 !workspaces/hidden-threshold-demo/**
+!workspaces/backend-benchmark-demo/
+!workspaces/backend-benchmark-demo/**
 *.log
 
 # Frontend (planned)

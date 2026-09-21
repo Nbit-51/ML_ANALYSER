@@ -1,0 +1,13 @@
+{
+  "adapter": "backend_http",
+  "entrypoint": "app.py",
+  "config_file": "config.json",
+  "candidate_overrides": {
+    "delay_seconds": 0.001
+  },
+  "health_path": "/health",
+  "benchmark_path": "/benchmark",
+  "requests": 20,
+  "startup_timeout_seconds": 5.0,
+  "request_timeout_seconds": 2.0
+}

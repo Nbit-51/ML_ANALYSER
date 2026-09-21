@@ -47,7 +47,7 @@ Examples of later adapters could include data pipelines, inference services, web
 
 ## Current phase
 
-**Phase 1: first evidence-loop vertical slice.**
+**Phase 2: generalized approval and second evidence-loop adapter.**
 
 Implemented through this phase:
 
@@ -61,15 +61,20 @@ Implemented through this phase:
 - deterministic objective, guardrail, and multidimensional-budget evaluation;
 - an append-only SQLite evidence ledger and persistent experiment DAG;
 - a narrow classification-threshold adapter and reproducible hidden-failure fixture;
-- automated API, security, persistence, evaluator, and end-to-end tests.
+- persisted fingerprint-bound approvals with explicit pending/approved/rejected/consumed states;
+- single-use authorization that rejects plan tampering and replay;
+- isolated baseline/candidate workspaces with deterministic retain/discard behavior;
+- a bounded backend HTTP benchmark adapter and non-ML fixture;
+- an environment-configured Nebius Token Factory provider with structured-output and grounding validation;
+- automated API, security, provider-contract, persistence, evaluator, and end-to-end tests.
 
 Explicitly not implemented yet:
 
-- general-purpose command execution or isolated patch application;
+- general-purpose command execution, container/VM sandboxing, or promotion of a retained candidate;
 - repository ingestion from remote URLs/uploads;
 - production experiment scheduling and recovery;
 - broad ML training/evaluation adapters;
-- Nebius/Nemotron provider calls;
+- live Nebius/Nemotron calls (the provider exists, but no credential/model deployment has been validated);
 - authentication;
 - frontend UI;
 - domain adapters beyond the documented placeholders.
@@ -132,9 +137,9 @@ Each milestone should provide a testable vertical slice. Infrastructure complexi
 | Selection | Expected value/information under a multidimensional budget | Treats time, money, compute, tokens, and experiment slots as optimization constraints. |
 | Domain support | Domain-neutral core with ML-first adapters | Demonstrates generality without claiming universal codebase support. |
 | Change safety | Isolate, measure, then keep or revert | Prevents plausible model output from silently degrading the accepted project state. |
-| Model access | Provider abstraction; mock first, Nebius next | Enables deterministic development before external access is provisioned. |
+| Model access | Deterministic mock plus configured Token Factory adapter | Enables offline tests while keeping Nebius/Nemotron as the live reasoning path. |
 | Evidence | Append-only records with artifact references | Prevents reports from silently losing provenance. |
-| Execution | Isolated workspace with allowlisted tools and limits | Reduces risk from untrusted repositories and generated commands. |
+| Execution | Narrow adapters in copied workspaces; no shell; explicit limits | Provides a testable safety boundary without overstating local copies as a production sandbox. |
 | Frontend | Minimal, demo-oriented UI; framework deferred | Avoids choosing UI infrastructure before workflows stabilize. |
 
 These are initial decisions, not immutable commitments. Changes should be recorded here and expanded into architecture decision records if the tradeoff is significant.
@@ -143,8 +148,9 @@ These are initial decisions, not immutable commitments. Changes should be record
 
 The repository contains `.env.example` with empty placeholders. Real values must be supplied through a local ignored `.env` file or the deployment environment.
 
-Planned variables include:
+Provider variables include:
 
+- `ML_ANALYSER_MODEL_PROVIDER` (`mock` by default; `nebius` enables live inference)
 - `NEBIUS_API_KEY`
 - `NEBIUS_BASE_URL`
 - `NEBIUS_MODEL`
@@ -170,12 +176,10 @@ A convincing end-to-end demo should show:
 
 ## Near-term milestones
 
-1. Define domain models for success contracts, project state, hypotheses, experiments, evidence, budgets, and agent/provider/tool interfaces.
-2. Implement a deterministic mock model provider.
-3. Build the first vertical slice: ingest -> diagnose -> hypothesize -> compile -> report (dry run).
-4. Add guarded reversible execution, measurement, decision logic, and experiment DAG persistence.
-5. Complete the ML adapter and hidden-failure experiment demo.
-6. Integrate Nebius Token Factory and validate a Nemotron deployment.
-7. Add the frontend run timeline, success-contract, DAG, and report views.
-8. Add a small backend benchmark adapter as proof of generality.
-9. Prepare a repeatable demo, deployment, and submission assets.
+1. Validate the implemented Token Factory adapter against a currently available NVIDIA Nemotron model when credentials arrive.
+2. Expand the ML adapter from saved-prediction calibration to a representative training/evaluation repository.
+3. Add retained-candidate diff review and a separately approved promotion workflow.
+4. Add the frontend run timeline, success-contract, approval, DAG, comparison, and report views.
+5. Add structured observability, cancellation/recovery, and production-grade sandbox integration.
+6. Prototype AI-agent evaluation only after the flagship demo is stable.
+7. Prepare repeatable deployment, security review, Devpost, and presentation assets.

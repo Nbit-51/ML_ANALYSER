@@ -215,6 +215,19 @@ class DecisionStatus(StrEnum):
     INCONCLUSIVE = "inconclusive"
 
 
+class ApprovalStatus(StrEnum):
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+    CONSUMED = "consumed"
+
+
+class RiskLevel(StrEnum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+
+
 class ExperimentSpec(StrictModel):
     id: str
     hypothesis_id: str
@@ -278,6 +291,19 @@ class DecisionRecord(StrictModel):
     budget: BudgetEvaluation
     reason: str
     evidence_ids: list[str] = Field(default_factory=list)
+
+
+class ApprovalRecord(StrictModel):
+    id: str
+    run_id: str
+    experiment_id: str
+    scope_fingerprint: str
+    summary: str
+    risk_level: RiskLevel
+    status: ApprovalStatus = ApprovalStatus.PENDING
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    decided_at: datetime | None = None
+    reason: str | None = None
 
 
 class AnalysisContext(StrictModel):
