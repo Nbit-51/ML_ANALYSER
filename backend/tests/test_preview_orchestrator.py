@@ -53,8 +53,9 @@ def test_preview_generates_falsifiable_ml_experiments_without_execution(
 
     assert result.final_state is RunState.COMPLETED
     assert RunState.EXECUTING not in result.state_history
-    assert len(result.hypotheses) == 2
-    assert len(result.experiments) == 2
+    # An arbitrary train.py is not an executable experiment declaration.
+    assert len(result.hypotheses) == 1
+    assert len(result.experiments) == 1
     assert all(experiment.command is None for experiment in result.experiments)
     assert result.experiments[0].measurements == ["f1", "latency_ms"]
     assert not marker.exists()

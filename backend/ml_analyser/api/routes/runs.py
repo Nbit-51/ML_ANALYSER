@@ -1,12 +1,14 @@
-"""Read-only analysis preview endpoints."""
+"""Preview, approval, execution, and live run endpoints."""
 
+import sqlite3
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, HTTPException, status
 from pydantic import Field
 
 from ml_analyser.adapters.backend_http import BackendAdapterError
 from ml_analyser.adapters.ml_threshold import AdapterValidationError
+from ml_analyser.adapters.ml_training import MlTrainingError
 from ml_analyser.agent.approval import ApprovalService
 from ml_analyser.agent.backend_benchmark import (
     BackendBenchmarkPipeline,
@@ -15,10 +17,19 @@ from ml_analyser.agent.backend_benchmark import (
     BackendPrepareResult,
 )
 from ml_analyser.agent.evaluator import DecisionEvaluator
+from ml_analyser.agent.ids import model_fingerprint
 from ml_analyser.agent.ml_demo import ThresholdDemoResult, ThresholdDemoService
+from ml_analyser.agent.ml_training import (
+    MlTrainingPipeline,
+    MlTrainingPlan,
+    MlTrainingPrepareResult,
+    MlTrainingResult,
+)
 from ml_analyser.agent.models import (
     ApprovalRecord,
+    ApprovalStatus,
     PreviewRunResult,
+    RunState,
     StrictModel,
     SuccessContract,
 )
@@ -65,6 +76,91 @@ class ApprovalDecisionRequest(StrictModel):
 class BackendExecuteRequest(StrictModel):
     approval_id: str = Field(min_length=1, max_length=120)
     plan: BackendBenchmarkPlan
+
+
+class MlTrainingExecuteRequest(StrictModel):
+    approval_id: str = Field(min_length=1, max_length=120)
+    plan: MlTrainingPlan
+
+
+def _validate_ready_approval(
+    store: SQLiteRunStore,
+    approval_id: str,
+    plan: BackendBenchmarkPlan | MlTrainingPlan,
+) -> None:
+    approval = store.get_approval(approval_id)
+    if approval is None:
+        raise HTTPException(status_code=404, detail="Approval does not exist.")
+    if approval.status is not ApprovalStatus.APPROVED:
+        raise HTTPException(status_code=409, detail=f"Approval is {approval.status.value}.")
+    if approval.scope_fingerprint != model_fingerprint(plan):
+        raise HTTPException(status_code=409, detail="Approval scope fingerprint does not match.")
+    if approval.run_id != plan.run_id:
+        raise HTTPException(status_code=409, detail="Approval belongs to a different run.")
+
+
+def _run_background(
+    *, adapter: str, plan: BackendBenchmarkPlan | MlTrainingPlan, approval_id: str
+) -> None:
+    settings = get_settings()
+    store = SQLiteRunStore(settings.state_database)
+    try:
+        project_root = resolve_project_path(settings.workspace_root, plan.project_path)
+
+        def callback(state: RunState) -> None:
+            store.record_run_state(plan.run_id, state.value)
+
+        if adapter == "backend_http" and isinstance(plan, BackendBenchmarkPlan):
+            backend_result = BackendBenchmarkPipeline(
+                provider=DeterministicMockProvider(),
+                inspector=RepositoryInventoryTool(),
+                approvals=ApprovalService(store),
+                evaluator=DecisionEvaluator(),
+                workspaces=IsolatedWorkspaceManager(settings.execution_root),
+                store=store,
+            ).execute(
+                plan=plan,
+                approval_id=approval_id,
+                project_root=project_root,
+                on_state=callback,
+            )
+        elif adapter == "ml_training" and isinstance(plan, MlTrainingPlan):
+            ml_result = MlTrainingPipeline(
+                provider=DeterministicMockProvider(),
+                inspector=RepositoryInventoryTool(),
+                approvals=ApprovalService(store),
+                evaluator=DecisionEvaluator(),
+                workspaces=IsolatedWorkspaceManager(settings.execution_root),
+                store=store,
+            ).execute(
+                plan=plan,
+                approval_id=approval_id,
+                project_root=project_root,
+                on_state=callback,
+            )
+        else:
+            raise ValueError("unsupported run adapter")
+        result = backend_result if adapter == "backend_http" else ml_result
+        store.finish_live_run(plan.run_id, result.model_dump(mode="json"))
+    except Exception as error:
+        store.fail_live_run(plan.run_id, f"{type(error).__name__}: {error}")
+
+
+def _queue_run(
+    *,
+    background_tasks: BackgroundTasks,
+    adapter: str,
+    plan: BackendBenchmarkPlan | MlTrainingPlan,
+    approval_id: str,
+) -> dict[str, str]:
+    store = SQLiteRunStore(get_settings().state_database)
+    _validate_ready_approval(store, approval_id, plan)
+    try:
+        store.create_live_run(plan.run_id, adapter)
+    except sqlite3.IntegrityError as error:
+        raise HTTPException(status_code=409, detail="Run is already queued.") from error
+    background_tasks.add_task(_run_background, adapter=adapter, plan=plan, approval_id=approval_id)
+    return {"run_id": plan.run_id, "status": "queued"}
 
 
 @router.post(
@@ -274,3 +370,112 @@ async def execute_backend_benchmark(request: BackendExecuteRequest) -> BackendEx
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=str(error),
         ) from error
+
+
+@router.post(
+    "/ml-training/prepare",
+    response_model=MlTrainingPrepareResult,
+    status_code=status.HTTP_201_CREATED,
+    summary="Prepare an approval-gated ML training comparison",
+)
+async def prepare_ml_training(request: PreviewRunRequest) -> MlTrainingPrepareResult:
+    settings = get_settings()
+    try:
+        project_root = resolve_project_path(settings.workspace_root, request.project_path)
+        store = SQLiteRunStore(settings.state_database)
+        pipeline = MlTrainingPipeline(
+            provider=build_model_provider(settings),
+            inspector=RepositoryInventoryTool(),
+            approvals=ApprovalService(store),
+            evaluator=DecisionEvaluator(),
+            workspaces=IsolatedWorkspaceManager(settings.execution_root),
+            store=store,
+        )
+        return await pipeline.prepare(
+            project_id=request.project_id or Path(request.project_path).name,
+            project_path=request.project_path,
+            project_root=project_root,
+            success_contract=request.success_contract,
+        )
+    except FileNotFoundError as error:
+        raise HTTPException(
+            status_code=404, detail="Workspace or project path does not exist."
+        ) from error
+    except InvalidWorkspacePath as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    except (MlTrainingError, RepositoryInventoryError, WorkspaceIsolationError) as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    except ProviderConfigurationError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
+    except ProviderResponseError as error:
+        raise HTTPException(status_code=502, detail=str(error)) from error
+
+
+@router.post(
+    "/ml-training/execute",
+    response_model=MlTrainingResult,
+    summary="Consume approval and compare isolated ML training runs",
+)
+async def execute_ml_training(request: MlTrainingExecuteRequest) -> MlTrainingResult:
+    settings = get_settings()
+    try:
+        project_root = resolve_project_path(settings.workspace_root, request.plan.project_path)
+        store = SQLiteRunStore(settings.state_database)
+        pipeline = MlTrainingPipeline(
+            provider=DeterministicMockProvider(),
+            inspector=RepositoryInventoryTool(),
+            approvals=ApprovalService(store),
+            evaluator=DecisionEvaluator(),
+            workspaces=IsolatedWorkspaceManager(settings.execution_root),
+            store=store,
+        )
+        return pipeline.execute(
+            plan=request.plan, approval_id=request.approval_id, project_root=project_root
+        )
+    except FileNotFoundError as error:
+        raise HTTPException(
+            status_code=404, detail="Workspace or project path does not exist."
+        ) from error
+    except InvalidWorkspacePath as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    except InvalidApprovalTransitionError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    except UnknownApprovalError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except (MlTrainingError, RepositoryInventoryError, WorkspaceIsolationError) as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@router.post("/backend-benchmark/start", status_code=202)
+async def start_backend_benchmark(
+    request: BackendExecuteRequest, background_tasks: BackgroundTasks
+) -> dict[str, str]:
+    """Queue the exact approved backend plan and return a pollable run ID."""
+    return _queue_run(
+        background_tasks=background_tasks,
+        adapter="backend_http",
+        plan=request.plan,
+        approval_id=request.approval_id,
+    )
+
+
+@router.post("/ml-training/start", status_code=202)
+async def start_ml_training(
+    request: MlTrainingExecuteRequest, background_tasks: BackgroundTasks
+) -> dict[str, str]:
+    """Queue the exact approved ML plan and return a pollable run ID."""
+    return _queue_run(
+        background_tasks=background_tasks,
+        adapter="ml_training",
+        plan=request.plan,
+        approval_id=request.approval_id,
+    )
+
+
+@router.get("/live/{run_id}")
+async def get_live_run(run_id: str) -> dict[str, object]:
+    """Return durable stage events and the final measured result when available."""
+    record = SQLiteRunStore(get_settings().state_database).get_live_run(run_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="Run does not exist.")
+    return record

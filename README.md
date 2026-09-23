@@ -1,12 +1,10 @@
 # ML Analyser
 
-ML Analyser is an autonomous evidence-driven optimization agent being built for the **Nebius x NVIDIA Global AI Hackathon 2026**, in the **Best Apps & Agents** track. ML is the flagship adapter and primary demonstration, while the underlying engine is designed around domain-neutral goals, metrics, constraints, experiments, observations, and decisions.
+ML Analyser is an evidence-driven engineering agent for improving measurable outcomes in software and ML projects. ML is the primary demonstration, while the underlying engine uses domain-neutral goals, metrics, constraints, experiments, observations, and decisions.
 
-> **Coding agents optimize code. ML Analyser optimizes measurable outcomes—and proves whether a change helped.**
+It diagnoses technical failures, turns explanations into falsifiable hypotheses, compiles controlled experiments, executes bounded tools, and retains changes only when recorded evidence supports them.
 
-It is designed to diagnose technical failures, turn explanations into falsifiable hypotheses, compile the smallest useful controlled experiments, execute them safely, and retain only changes supported by recorded evidence. The hackathon MVP goes deepest on ML experimentation.
-
-> Status: two tested evidence-loop vertical slices. The ML demo verifies threshold calibration from saved predictions. The backend demo adds fingerprint-bound, single-use approval; isolated baseline/candidate execution; real localhost measurement; deterministic retain/discard decisions; and persistent evidence. A Nebius Token Factory provider is implemented and contract-tested, but live Nemotron inference remains unverified until credentials and a current model ID are supplied.
+> Status: the local ML training and backend benchmark workflows are implemented and tested. Both support plan review, fingerprint-bound single-use approval, isolated baseline/candidate execution, measured decisions, and persisted evidence. The Token Factory provider is contract-tested but awaits live validation with credentials and a current Nemotron model ID.
 
 ## What works today
 
@@ -15,6 +13,8 @@ It is designed to diagnose technical failures, turn explanations into falsifiabl
 - `POST /api/v1/runs/backend-benchmark/prepare` creates a complete experiment plan and a persisted approval bound to the plan's canonical fingerprint.
 - `POST /api/v1/runs/approvals/{approval_id}` approves or rejects exactly one pending scope. An approved scope is single-use; changed plans and replay attempts are rejected.
 - `POST /api/v1/runs/backend-benchmark/execute` copies the source into isolated baseline and candidate workspaces, applies only manifest-declared JSON overrides, runs a bounded localhost benchmark, evaluates objective/guardrails/budget, and retains or discards the candidate without modifying the source.
+- `POST /api/v1/runs/ml-training/prepare` and `/ml-training/execute` perform the same approved evidence loop for a declared Python training entrypoint and JSON configuration. The adapter measures actual validation metrics emitted by the script, not model-generated estimates.
+- `POST /api/v1/runs/ml-training/start` and `/backend-benchmark/start` launch local background runs; `GET /api/v1/runs/live/{run_id}` exposes persisted progress events and results. The browser workbench is available at `/app`.
 - The lifecycle rejects illegal stage transitions, unknown schema fields are rejected, project paths cannot escape the configured workspace, and preview mode never imports or executes target repository code.
 - The mock provider is deterministic and offline. The real Nebius provider is disabled by default, requests structured JSON, and rejects malformed or ungrounded responses. Nebius/Nemotron is never silently simulated.
 
@@ -30,6 +30,8 @@ The included hidden-failure fixture proves the loop on a deliberately miscalibra
 The candidate passes the `F1 +0.01` objective, `recall >= 0.8` guardrail, and configured experiment budget. These values are computed from the committed validation-prediction fixture; they are not model-generated claims.
 
 The backend fixture provides a second, non-ML proof. In the final local validation on September 21, 2026, P95 latency improved from **50.23 ms** to **22.12 ms**, error rate remained `0`, and baseline/candidate response hashes were identical. The accepted candidate was retained in an isolated workspace and the original project was unchanged. Latency varies by host, so automated tests assert the contract (`candidate P95 < 40 ms` and improvement `> 10 ms`) rather than this one observed value.
+
+The training fixture is a small, deterministic logistic-regression project. On the included data, the baseline produced F1 **0.6667** and accuracy **0.5000**; the approved configuration candidate produced F1 **1.0000** and accuracy **1.0000**, with recall **1.0000** in both cases. The source fixture was unchanged; the accepted configuration remains in an isolated candidate workspace. This fixture demonstrates the workflow, not broad model-quality generalization.
 
 ## The problem
 
@@ -66,7 +68,7 @@ The defensible system is the combination of:
 - durable evidence and experiment lineage rather than chat history; and
 - an adaptive loop in which experiment N determines experiment N+1.
 
-Nothing depends on claiming that a particular model is irreplaceable. Nemotron through Nebius powers reasoning; the execution, lineage, evaluation, and memory layers create the product value.
+The model supports reasoning. Execution, lineage, evaluation, and evidence make the recommendations verifiable.
 
 The same core loop can optimize different measurable systems through adapters:
 
@@ -161,7 +163,7 @@ Model provider   Guarded runner ---- Objective/guardrail evaluator
              Isolated workspace / compute
 ```
 
-See [Architecture](docs/ARCHITECTURE.md) for component boundaries, run states, safety rules, and the intended data model. See [Project context](docs/PROJECT_CONTEXT.md) for constraints and current decisions, and [Demo guide](docs/DEMO_GUIDE.md) for the reproducible judge-facing walkthrough.
+See [Architecture](docs/ARCHITECTURE.md) for component boundaries and run states, [Project context](docs/PROJECT_CONTEXT.md) for current decisions, [Demo guide](docs/DEMO_GUIDE.md) for a reproducible walkthrough, and [Deployment and security](docs/DEPLOYMENT_AND_SECURITY.md) for the execution boundary.
 
 ## Technology stack
 
@@ -175,11 +177,12 @@ Current foundation:
 - Ruff and mypy
 - SQLite evidence, approval, and experiment-DAG persistence
 - Isolated local workspaces and a bounded HTTP benchmark adapter
+- A declared Python training adapter and a dependency-free HTML/CSS/JavaScript workbench
+- Persisted local run events and polling-based progress
 
 Planned additions:
 
-- a minimal recruiter-friendly web frontend (framework to be selected when frontend work begins);
-- structured tracing and streaming progress updates.
+- production-grade worker scheduling, structured tracing, and streaming progress updates.
 
 ## Nebius and NVIDIA integration
 
@@ -207,11 +210,15 @@ No API credentials belong in this repository. `.env.example` contains variable n
 |-- docs/
 |   |-- ARCHITECTURE.md
 |   |-- BACKEND_BENCHMARK_DEMO.md
+|   |-- DEPLOYMENT_AND_SECURITY.md
 |   |-- DEMO_GUIDE.md
 |   `-- PROJECT_CONTEXT.md
+|-- frontend/               # Browser workbench served at /app
+|-- scripts/                # Credential-gated live provider validation
 |-- workspaces/
 |   |-- hidden-threshold-demo/ # Committed deterministic ML fixture
-|   `-- backend-benchmark-demo/ # Committed localhost benchmark fixture
+|   |-- backend-benchmark-demo/ # Committed localhost benchmark fixture
+|   `-- ml-training-demo/   # Committed training/evaluation fixture
 |-- .github/workflows/ci.yml
 |-- .env.example
 `-- pyproject.toml
@@ -256,6 +263,9 @@ Then open:
 - API root: <http://127.0.0.1:8000/>
 - health check: <http://127.0.0.1:8000/api/v1/health>
 - OpenAPI UI: <http://127.0.0.1:8000/docs>
+- browser workbench: <http://127.0.0.1:8000/app>
+
+The workbench uses the mock provider by default. Choose the ML training or backend benchmark fixture, inspect the generated plan and success contract, approve its exact scope, then follow the run timeline and measured decision. Its local background tasks are process-bound: restarting the API interrupts active work. For an untrusted uploaded repository, use an external sandbox rather than this local runner.
 
 ### Run the hidden-failure demonstration
 
@@ -272,6 +282,10 @@ The JSON response contains the hypothesis, baseline and candidate confusion matr
 ### Run the backend benchmark demonstration
 
 The backend proof deliberately uses separate prepare, approve, and execute calls so a reviewer can inspect the complete scope before granting execution. See [Backend benchmark demo](docs/BACKEND_BENCHMARK_DEMO.md) for PowerShell and API examples plus the measured result.
+
+### Validate Token Factory when access is available
+
+Set `ML_ANALYSER_MODEL_PROVIDER=nebius`, `NEBIUS_API_KEY`, and a currently available NVIDIA Nemotron ID in `NEBIUS_MODEL`. Then run `python scripts/validate_nebius.py` from the repository root. This performs a read-only preview and validates the returned hypotheses; it does not execute project code. The default request mode is `json_schema`. If the selected model supports JSON-object mode instead, set `ML_ANALYSER_NEBIUS_RESPONSE_FORMAT=json_object` and repeat. No credential value is printed. Passing this smoke test establishes provider connectivity and schema compatibility; the full approved experiment should then be tested through `/app`.
 
 ### Quality checks
 
@@ -300,13 +314,13 @@ CI additionally enforces at least 90% backend statement coverage.
 - [x] Add objective, regression-guardrail, and compute-budget evaluation.
 - [x] Add reversible local change handling: isolate, measure, retain or discard.
 - [x] Add a deterministic threshold-calibration adapter and hidden-failure demo.
-- [ ] Complete the ML adapter and an end-to-end hidden-failure demo.
+- [x] Add a declared ML training adapter and an end-to-end measured fixture.
 - [x] Add a smaller backend benchmark adapter to prove core generality.
 - [ ] Prototype AI-agent evaluation if core milestones are complete.
 - [ ] Live-validate NVIDIA Nemotron through the implemented Nebius Token Factory provider.
-- [ ] Build the frontend and real-time run view.
-- [ ] Create an end-to-end demonstration on a representative ML repository.
-- [ ] Add deployment guidance, observability, security review, and Devpost materials.
+- [x] Build the browser workbench and polling-based run view.
+- [x] Create an end-to-end demonstration on a small representative ML training repository.
+- [ ] Add production deployment, stronger observability, and an external execution sandbox.
 
 ## Development principles
 

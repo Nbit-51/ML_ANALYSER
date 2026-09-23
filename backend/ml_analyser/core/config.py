@@ -32,6 +32,7 @@ class Settings(BaseSettings):
     )
     nebius_model: str | None = Field(default=None, validation_alias="NEBIUS_MODEL")
     nebius_timeout_seconds: float = Field(default=60.0, gt=0, le=300)
+    nebius_response_format: Literal["json_schema", "json_object"] = "json_schema"
 
 
 @lru_cache

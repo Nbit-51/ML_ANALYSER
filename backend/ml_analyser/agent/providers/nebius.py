@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from typing import Any
+from typing import Any, Literal
 
 import httpx
 from pydantic import Field, ValidationError
@@ -39,6 +39,7 @@ class NebiusTokenFactoryProvider:
         model: str,
         base_url: str = "https://api.tokenfactory.nebius.com/v1",
         timeout_seconds: float = 60.0,
+        response_format: Literal["json_schema", "json_object"] = "json_schema",
         client: httpx.AsyncClient | None = None,
     ) -> None:
         if not api_key.strip():
@@ -51,6 +52,7 @@ class NebiusTokenFactoryProvider:
         self._model = model
         self._base_url = base_url.rstrip("/")
         self._timeout_seconds = timeout_seconds
+        self._response_format = response_format
         self._client = client
 
     @property
@@ -110,6 +112,18 @@ class NebiusTokenFactoryProvider:
             "evidence": [evidence.model_dump(mode="json") for evidence in context.evidence],
             "allowed_evidence_ids": observed_ids,
         }
+        format_spec: dict[str, Any] = (
+            {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "ml_engineering_hypotheses",
+                    "strict": True,
+                    "schema": schema,
+                },
+            }
+            if self._response_format == "json_schema"
+            else {"type": "json_object"}
+        )
         return {
             "model": self._model,
             "temperature": 0,
@@ -121,8 +135,11 @@ class NebiusTokenFactoryProvider:
                         "engineering agent. Propose only falsifiable hypotheses grounded in the "
                         "provided evidence. Do not claim that commands ran or results were "
                         "observed. "
+                        "If an evidence item declares the ml_training adapter, include an "
+                        "optimization hypothesis about the declared configuration intervention. "
                         "Every evidence_ids value must come from allowed_evidence_ids. Return JSON "
-                        "that exactly follows the supplied schema."
+                        "that exactly follows the supplied schema: "
+                        f"{json.dumps(schema, separators=(',', ':'))}"
                     ),
                 },
                 {
@@ -130,14 +147,7 @@ class NebiusTokenFactoryProvider:
                     "content": json.dumps(user_context, separators=(",", ":")),
                 },
             ],
-            "response_format": {
-                "type": "json_schema",
-                "json_schema": {
-                    "name": "ml_engineering_hypotheses",
-                    "strict": True,
-                    "schema": schema,
-                },
-            },
+            "response_format": format_spec,
         }
 
     @staticmethod

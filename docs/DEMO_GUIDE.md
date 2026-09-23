@@ -1,10 +1,25 @@
-# Hidden-Failure Demo Guide
+# Demonstration guide
 
 ## Demo thesis
 
 AI coding assistants are good at proposing changes. ML Analyser treats every proposal as a hypothesis until measurement proves it helped.
 
-This demonstration uses a binary-classification project with saved validation labels and scores. The model itself is not retrained. The hidden problem is that its default decision threshold is poorly calibrated for the stated success contract.
+The primary workbench demonstration uses a small binary-classification training repository with an underpowered baseline configuration. A separate saved-prediction threshold fixture remains available as a read-only, faster evidence-loop example.
+
+## Primary browser walkthrough
+
+Start the API with `uvicorn ml_analyser.main:app --app-dir backend --reload` and open `http://127.0.0.1:8000/app`.
+
+1. Select **ML training** and inspect the displayed F1 objective, recall/accuracy guardrails, and 10-second budget.
+2. Select **Inspect & prepare experiment**. Preparation inventories the fixture and exposes the hypothesis, configuration override, rejection rule, and approval risk. No target code runs yet.
+3. Select **Approve exact plan & start**. The approval is bound to the plan fingerprint and can be consumed once.
+4. Follow the persisted state timeline while the baseline and candidate copies train and evaluate.
+5. Inspect measured F1/accuracy/recall, the decision reason, evidence IDs, baseline-to-candidate lineage, and the retained candidate disposition.
+6. Repeat with **Backend benchmark** to show that the same approval, objective, guardrail, evidence, and decision machinery applies outside ML.
+
+The training fixture's observed baseline F1 is **0.6667** and candidate F1 is **1.0000**. Accuracy rises from **0.5000** to **1.0000**; recall remains **1.0000**. These values are emitted by `train.py` after real local evaluation and asserted in tests. The original fixture is unchanged. This is a controlled workflow proof on a tiny dataset, not evidence of broad model generalization.
+
+## Saved-prediction threshold example
 
 ## Success contract
 
@@ -77,9 +92,9 @@ These values are calculated from the committed `validation_predictions.csv` fixt
 ## Honest limitations
 
 - This is a narrow threshold-calibration adapter over saved binary-classification predictions.
-- It does not yet train models, create patches, or isolate arbitrary commands.
+- The primary ML adapter runs a declared training script; arbitrary commands and patch generation remain unsupported.
 - The mock provider is rule-based and offline; no claim is made that Nemotron was called.
 - The state graph currently models repository/category/file provenance, not parsed code semantics.
-- The SQLite store is appropriate for the local MVP, not distributed experiment workers.
+- The SQLite store and process-local background tasks are appropriate for the local workbench, not distributed experiment workers.
 
 Those limits are intentional. The demo proves the evidence loop before the project expands its execution surface.

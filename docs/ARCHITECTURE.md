@@ -6,7 +6,7 @@ ML Analyser is designed as a closed-loop, evidence-driven optimization system. I
 
 The architecture separates HTTP transport, domain-neutral orchestration, project understanding, domain adapters, inference providers, guarded execution, evaluation, persistence, and presentation. ML is the flagship adapter; the core vocabulary is goal, metric, constraint, hypothesis, experiment, observation, and decision.
 
-Two vertical slices are implemented. The ML path performs a bounded threshold experiment over saved predictions. The backend path performs persisted fingerprint-bound approval, isolated baseline/candidate execution, localhost measurement, deterministic evaluation, and candidate retain/discard. A real Token Factory provider is implemented behind configuration and contract-tested without credentials. Live Nemotron validation, arbitrary command execution, broad ML training, promotion of retained candidates, and the frontend remain planned and must not be presented as implemented.
+Three bounded vertical slices are implemented. The ML threshold path measures saved predictions. The ML training and backend benchmark paths perform persisted fingerprint-bound approval, isolated baseline/candidate execution, deterministic evaluation, and candidate retain/discard. A browser workbench exposes plan review and persisted run events. A Token Factory provider is implemented behind configuration and contract-tested without credentials. Live Nemotron validation, arbitrary command execution, production-grade scheduling, and promotion of retained candidates remain unverified or planned.
 
 ## System context
 
@@ -14,7 +14,7 @@ Two vertical slices are implemented. The ML path performs a bounded threshold ex
 User + success contract
           |
           v
-Web frontend (planned) -> FastAPI service
+Browser workbench -> FastAPI service
                               |
                               v
                  Closed-loop orchestrator
@@ -59,7 +59,7 @@ Responsibilities:
 - expose progress, hypotheses, evidence, experiment lineage, budgets, and reports;
 - map domain errors to stable HTTP responses.
 
-The API layer contains no decision logic and issues no arbitrary shell commands. It exposes service/health routes, read-only preview, the ML demo, and the three-stage backend prepare/approve/execute workflow.
+The API layer contains no decision logic and issues no arbitrary shell commands. It exposes health, read-only preview, the saved-prediction demo, ML training and backend prepare/approve/execute flows, and background run-status reads.
 
 ### Application services
 
@@ -164,7 +164,7 @@ A cheap diagnostic can outrank a more promising but expensive change when it eli
 
 Tools have typed input/output schemas and declared capabilities. Early tools may include repository inventory, targeted search, dependency/config inspection, tests, linters, log and metric parsers, benchmarks, and narrowly scoped training/evaluation commands.
 
-The backend adapter implements the first narrow runner: it copies the project, rejects symlinks, launches only the current Python interpreter with isolation mode and no shell, binds to localhost, enforces request/startup/process timeouts, allowlists environment variables, and bounds output. This is not an OS/container sandbox. A candidate is provisional: accepted candidates remain isolated for later promotion, while rejected candidates are discarded and the source remains untouched.
+The backend and training adapters implement narrow runners: they copy the project, reject symlinks, launch only the current Python interpreter with isolation mode and no shell, enforce timeouts, allowlist environment variables, and bound output. The backend runner binds to localhost; the training runner reads a declared metric JSON file. This is not an OS/container sandbox. A candidate is provisional: accepted candidates remain isolated for later promotion, while rejected candidates are discarded and the source remains untouched.
 
 ### Evaluator and decision policy
 
@@ -201,9 +201,9 @@ Run
 
 Large outputs and binary artifacts live in artifact storage; persistence records contain hashes, metadata, and stable references. Rejected hypotheses remain searchable and are reconsidered only if relevant project state changes.
 
-### Frontend (planned)
+### Frontend
 
-The frontend should optimize for a short, legible demonstration:
+The current workbench presents two fixture workflows:
 
 - define or load a success contract;
 - observe the diagnose-to-decision stage and remaining budget;
@@ -212,7 +212,7 @@ The frontend should optimize for a short, legible demonstration:
 - inspect experiment lineage, rejected ideas, and why each change was kept or reverted;
 - read the final evidence-backed report.
 
-Visual complexity that does not reinforce trust, evidence, or progress should be avoided.
+It polls persisted run snapshots and displays stage progression, metrics, evidence, and lineage. It does not stream events or offer arbitrary repository uploads. Visual complexity that does not reinforce trust, evidence, or progress is avoided.
 
 ## End-to-end request flow
 
@@ -264,6 +264,12 @@ Current endpoints:
 | `POST` | `/api/v1/runs/backend-benchmark/prepare` | Persist an exact backend plan and pending approval. |
 | `POST` | `/api/v1/runs/approvals/{approval_id}` | Approve or reject one fingerprinted scope. |
 | `POST` | `/api/v1/runs/backend-benchmark/execute` | Consume approval and benchmark isolated baseline/candidate copies. |
+| `POST` | `/api/v1/runs/ml-training/prepare` | Persist a scoped ML training plan and pending approval. |
+| `POST` | `/api/v1/runs/ml-training/execute` | Consume approval and measure baseline/candidate training. |
+| `POST` | `/api/v1/runs/ml-training/start` | Start approved training in a local background task. |
+| `POST` | `/api/v1/runs/backend-benchmark/start` | Start approved benchmark in a local background task. |
+| `GET` | `/api/v1/runs/live/{run_id}` | Read persisted status, events, and final result. |
+| `GET` | `/app` | Browser workbench. |
 
 ## Observability (planned)
 
@@ -278,7 +284,7 @@ Use structured logs with run, stage, experiment, tool-call, adapter, and provide
 - **Decision tests:** known baselines/candidates covering accept, reject, inconclusive, and revert behavior.
 - **End-to-end tests:** deployed ML demo plus a smaller software benchmark path.
 
-The current suite contains 38 unit, provider-contract, API, persistence, safety, decision, and end-to-end tests. CI enforces formatting, linting, strict type checking, and at least 90% statement coverage.
+The current suite includes unit, provider-contract, API, persistence, safety, decision, and end-to-end tests. CI enforces formatting, linting, strict type checking, and at least 90% statement coverage.
 
 ## Deployment direction
 

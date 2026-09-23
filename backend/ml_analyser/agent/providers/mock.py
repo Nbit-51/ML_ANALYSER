@@ -61,7 +61,12 @@ class DeterministicMockProvider:
             for file in context.inventory.files
         )
 
-        if has_ml_signal and objective.metric.casefold() in CLASSIFICATION_METRICS:
+        has_saved_predictions = any(path.endswith("ml_analyser.json") for path in paths)
+        if (
+            has_ml_signal
+            and has_saved_predictions
+            and objective.metric.casefold() in CLASSIFICATION_METRICS
+        ):
             hypotheses.append(
                 Hypothesis(
                     id=stable_id("hypothesis", context.project_id, "threshold", objective.metric),
@@ -121,6 +126,36 @@ class DeterministicMockProvider:
                     rejection_criteria=(
                         "Reject if the objective fails, any guardrail fails, the response changes, "
                         "or the observed resource usage exceeds budget."
+                    ),
+                    evidence_ids=[evidence_id],
+                    priority=90,
+                )
+            )
+
+        if any(path.endswith("ml_experiment.json") for path in paths):
+            hypotheses.append(
+                Hypothesis(
+                    id=stable_id("hypothesis", context.project_id, "ml-training", objective.metric),
+                    kind=HypothesisKind.OPTIMIZATION,
+                    statement=(
+                        "The manifest-declared training configuration change may improve "
+                        f"validation {objective.metric}."
+                    ),
+                    rationale=(
+                        "A controlled baseline and candidate run can distinguish a training "
+                        "configuration failure from an unsupported claim."
+                    ),
+                    proposed_intervention=(
+                        "Apply the manifest-declared configuration override in an isolated copy "
+                        "and compare validation metrics on the same split."
+                    ),
+                    expected_outcome=MetricExpectation(
+                        metric=objective.metric,
+                        direction=objective.direction,
+                        minimum_delta=objective.minimum_improvement,
+                    ),
+                    rejection_criteria=(
+                        "Reject if improvement, any guardrail, or the compute budget fails."
                     ),
                     evidence_ids=[evidence_id],
                     priority=90,

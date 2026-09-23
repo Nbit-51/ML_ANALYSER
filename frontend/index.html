@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ML Analyser | Experiment workbench</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/app" aria-label="ML Analyser home"><span class="brand-mark">M</span><span>ML Analyser</span></a>
+    <span class="topbar-right"><span class="pulse"></span> Local experiment workbench <a href="/docs" target="_blank" rel="noreferrer">API docs ↗</a></span>
+  </header>
+  <main>
+    <section class="hero">
+      <div class="eyebrow">EXPERIMENT WORKBENCH</div>
+      <h1>Controlled experiments.<br><em>Measured outcomes.</em></h1>
+      <p>Inspect a project, review one falsifiable experiment, approve its exact scope, and compare measured outcomes against your guardrails.</p>
+      <div class="hero-steps"><span>01 · Diagnose</span><span>02 · Approve</span><span>03 · Measure</span><span>04 · Decide</span></div>
+    </section>
+
+    <div class="workspace-grid">
+      <section class="panel setup" aria-labelledby="setup-title">
+        <div class="section-heading"><span class="section-number">01</span><div><p class="kicker">EXPERIMENT SETUP</p><h2 id="setup-title">Choose a project</h2></div></div>
+        <div class="adapter-options" role="radiogroup" aria-label="Demo project">
+          <label class="adapter-card selected"><input type="radio" name="adapter" value="ml-training" checked><span class="card-icon">◈</span><strong>ML training</strong><small>Hidden learning rate failure · validation F1</small></label>
+          <label class="adapter-card"><input type="radio" name="adapter" value="backend-benchmark"><span class="card-icon">▤</span><strong>Backend benchmark</strong><small>Slow response config · P95 latency</small></label>
+        </div>
+        <div class="contract" id="contract"></div>
+        <button class="primary-button" id="prepare-button" type="button">Inspect & prepare experiment <span>→</span></button>
+        <p class="fine-print">Preparation inventories the repository and produces a reviewable plan. It does not run project code.</p>
+      </section>
+
+      <section class="panel run-panel" aria-labelledby="run-title">
+        <div class="section-heading"><span class="section-number">02</span><div><p class="kicker">RUN CONTROL</p><h2 id="run-title">Experiment timeline</h2></div></div>
+        <div class="run-status"><span id="status-dot" class="status-dot idle"></span><strong id="status-label">Ready to prepare</strong><span id="run-id" class="run-id"></span></div>
+        <ol class="timeline" id="timeline" aria-live="polite"></ol>
+        <div id="plan-review" class="plan-review hidden">
+          <div class="review-header"><span>PLAN READY FOR REVIEW</span><span id="risk-pill" class="risk-pill"></span></div>
+          <h3 id="plan-title"></h3>
+          <p id="hypothesis"></p>
+          <div class="plan-detail"><strong>Proposed change</strong><ul id="changes"></ul></div>
+          <div class="plan-detail"><strong>Rejection rule</strong><p id="rejection"></p></div>
+          <button class="approve-button" id="approve-button" type="button">Approve exact plan & start <span>→</span></button>
+          <p class="fine-print">Approval is bound to this plan fingerprint and can be used once.</p>
+        </div>
+        <div id="error-box" class="error-box hidden" role="alert"></div>
+      </section>
+    </div>
+
+    <section class="panel results hidden" id="results" aria-labelledby="results-title">
+      <div class="section-heading"><span class="section-number">03</span><div><p class="kicker">MEASURED OUTCOME</p><h2 id="results-title">Evidence & decision</h2></div><span id="decision-pill" class="decision-pill"></span></div>
+      <p class="decision-reason" id="decision-reason"></p>
+      <div class="metric-grid" id="metrics"></div>
+      <div class="result-columns"><div><h3>Evidence ledger</h3><div id="evidence"></div></div><div><h3>Experiment lineage</h3><div id="lineage"></div><h3>Change disposition</h3><p id="disposition"></p></div></div>
+    </section>
+  </main>
+  <footer><span>ML Analyser</span><span>Measured outcomes. Traceable decisions.</span></footer>
+</body>
+</html>

@@ -30,4 +30,5 @@ def build_model_provider(settings: Settings) -> ModelProvider:
         model=model,
         base_url=settings.nebius_base_url,
         timeout_seconds=settings.nebius_timeout_seconds,
+        response_format=settings.nebius_response_format,
     )

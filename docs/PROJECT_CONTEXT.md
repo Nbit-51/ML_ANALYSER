@@ -47,7 +47,7 @@ Examples of later adapters could include data pipelines, inference services, web
 
 ## Current phase
 
-**Phase 2: generalized approval and second evidence-loop adapter.**
+**Phase 3: two executable adapters and local run workbench.**
 
 Implemented through this phase:
 
@@ -65,7 +65,10 @@ Implemented through this phase:
 - single-use authorization that rejects plan tampering and replay;
 - isolated baseline/candidate workspaces with deterministic retain/discard behavior;
 - a bounded backend HTTP benchmark adapter and non-ML fixture;
+- a declared Python training adapter and deterministic ML training fixture;
+- polling-based browser workbench with persisted run-state snapshots and events;
 - an environment-configured Nebius Token Factory provider with structured-output and grounding validation;
+- a read-only live-provider smoke test for use once credentials and a model ID are available;
 - automated API, security, provider-contract, persistence, evaluator, and end-to-end tests.
 
 Explicitly not implemented yet:
@@ -73,10 +76,10 @@ Explicitly not implemented yet:
 - general-purpose command execution, container/VM sandboxing, or promotion of a retained candidate;
 - repository ingestion from remote URLs/uploads;
 - production experiment scheduling and recovery;
-- broad ML training/evaluation adapters;
+- arbitrary training scripts without an explicit experiment manifest;
 - live Nebius/Nemotron calls (the provider exists, but no credential/model deployment has been validated);
 - authentication;
-- frontend UI;
+- durable worker scheduling, cancellation, and restart recovery;
 - domain adapters beyond the documented placeholders.
 
 ## Guiding principles
@@ -140,7 +143,9 @@ Each milestone should provide a testable vertical slice. Infrastructure complexi
 | Model access | Deterministic mock plus configured Token Factory adapter | Enables offline tests while keeping Nebius/Nemotron as the live reasoning path. |
 | Evidence | Append-only records with artifact references | Prevents reports from silently losing provenance. |
 | Execution | Narrow adapters in copied workspaces; no shell; explicit limits | Provides a testable safety boundary without overstating local copies as a production sandbox. |
-| Frontend | Minimal, demo-oriented UI; framework deferred | Avoids choosing UI infrastructure before workflows stabilize. |
+| Frontend | Dependency-free HTML/CSS/JavaScript workbench served by FastAPI | Keeps the demo small, portable, and directly tied to run evidence. |
+| Progress | SQLite run snapshots and transition events; polling client | Makes each stage visible without introducing a broker before deployment needs one. |
+| Training execution | Explicit manifest, current Python in isolation mode, copied workspaces | Proves an actual train/evaluate loop while keeping the allowed command surface narrow. |
 
 These are initial decisions, not immutable commitments. Changes should be recorded here and expanded into architecture decision records if the tradeoff is significant.
 
@@ -154,6 +159,7 @@ Provider variables include:
 - `NEBIUS_API_KEY`
 - `NEBIUS_BASE_URL`
 - `NEBIUS_MODEL`
+- `ML_ANALYSER_NEBIUS_RESPONSE_FORMAT` (`json_schema` or `json_object`)
 
 No working credentials, fabricated credentials, or assumed model deployment IDs are included.
 
@@ -177,9 +183,8 @@ A convincing end-to-end demo should show:
 ## Near-term milestones
 
 1. Validate the implemented Token Factory adapter against a currently available NVIDIA Nemotron model when credentials arrive.
-2. Expand the ML adapter from saved-prediction calibration to a representative training/evaluation repository.
+2. Test the approved ML experiment flow with live reasoning and debug any model-specific schema or grounding issues.
 3. Add retained-candidate diff review and a separately approved promotion workflow.
-4. Add the frontend run timeline, success-contract, approval, DAG, comparison, and report views.
-5. Add structured observability, cancellation/recovery, and production-grade sandbox integration.
-6. Prototype AI-agent evaluation only after the flagship demo is stable.
-7. Prepare repeatable deployment, security review, Devpost, and presentation assets.
+4. Add structured observability, cancellation/recovery, and production-grade sandbox integration.
+5. Prototype AI-agent evaluation only after the flagship demo is stable.
+6. Prepare repeatable deployment and presentation assets.

@@ -1,0 +1,11 @@
+{
+  "adapter": "ml_training",
+  "entrypoint": "train.py",
+  "config_file": "config.json",
+  "candidate_overrides": {
+    "epochs": 250,
+    "learning_rate": 0.2
+  },
+  "metrics_file": "metrics.json",
+  "timeout_seconds": 15
+}

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from ml_analyser.agent.models import RunState
 
 TERMINAL_STATES = frozenset({RunState.COMPLETED, RunState.FAILED, RunState.CANCELLED})
@@ -51,9 +53,10 @@ class InvalidStateTransition(ValueError):
 class RunLifecycle:
     """Small state machine that records every legal transition."""
 
-    def __init__(self) -> None:
+    def __init__(self, on_transition: Callable[[RunState], None] | None = None) -> None:
         self._current = RunState.CREATED
         self._history = [RunState.CREATED]
+        self._on_transition = on_transition
 
     @property
     def current(self) -> RunState:
@@ -70,3 +73,5 @@ class RunLifecycle:
             )
         self._current = next_state
         self._history.append(next_state)
+        if self._on_transition is not None:
+            self._on_transition(next_state)

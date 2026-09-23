@@ -1,0 +1,17 @@
+{
+  "project_path": "ml-training-demo",
+  "project_id": "ml-training-demo",
+  "success_contract": {
+    "objective": {
+      "metric": "f1",
+      "direction": "maximize",
+      "target": 0.9,
+      "minimum_improvement": 0.1
+    },
+    "constraints": [
+      {"metric": "recall", "operator": "gte", "threshold": 1.0},
+      {"metric": "accuracy", "operator": "gte", "threshold": 0.9}
+    ],
+    "budget": {"max_wall_clock_seconds": 10, "max_experiments": 1}
+  }
+}

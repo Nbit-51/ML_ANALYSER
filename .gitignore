@@ -33,9 +33,11 @@ workspaces/*
 !workspaces/hidden-threshold-demo/**
 !workspaces/backend-benchmark-demo/
 !workspaces/backend-benchmark-demo/**
+!workspaces/ml-training-demo/
+!workspaces/ml-training-demo/**
 *.log
 
-# Frontend (planned)
+# Optional frontend build outputs
 node_modules/
 .next/
 out/

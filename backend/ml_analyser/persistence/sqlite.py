@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import json
 import sqlite3
 from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 from ml_analyser.agent.models import (
     ApprovalRecord,
@@ -209,6 +211,71 @@ class SQLiteRunStore:
                 )
         return consumed
 
+    def create_live_run(self, run_id: str, adapter: str) -> None:
+        """Record a queued background execution before returning HTTP 202."""
+        with self._connect() as connection:
+            connection.execute(
+                "INSERT INTO live_runs (run_id, adapter, status, state) VALUES (?, ?, ?, ?)",
+                (run_id, adapter, "queued", "awaiting_approval"),
+            )
+            connection.execute(
+                "INSERT INTO run_events (run_id, state) VALUES (?, ?)",
+                (run_id, "awaiting_approval"),
+            )
+
+    def record_run_state(self, run_id: str, state: str) -> None:
+        with self._connect() as connection:
+            connection.execute(
+                "UPDATE live_runs SET status = 'running', state = ? WHERE run_id = ?",
+                (state, run_id),
+            )
+            connection.execute(
+                "INSERT INTO run_events (run_id, state) VALUES (?, ?)",
+                (run_id, state),
+            )
+
+    def finish_live_run(self, run_id: str, result: dict[str, Any]) -> None:
+        with self._connect() as connection:
+            connection.execute(
+                "UPDATE live_runs SET status = 'completed', state = 'completed', "
+                "result = ? WHERE run_id = ?",
+                (json.dumps(result), run_id),
+            )
+
+    def fail_live_run(self, run_id: str, error: str) -> None:
+        with self._connect() as connection:
+            connection.execute(
+                "UPDATE live_runs SET status = 'failed', state = 'failed', error = ? "
+                "WHERE run_id = ?",
+                (error[:1000], run_id),
+            )
+            connection.execute(
+                "INSERT INTO run_events (run_id, state) VALUES (?, 'failed')",
+                (run_id,),
+            )
+
+    def get_live_run(self, run_id: str) -> dict[str, Any] | None:
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT adapter, status, state, result, error FROM live_runs WHERE run_id = ?",
+                (run_id,),
+            ).fetchone()
+            if row is None:
+                return None
+            events = connection.execute(
+                "SELECT state FROM run_events WHERE run_id = ? ORDER BY sequence",
+                (run_id,),
+            ).fetchall()
+        return {
+            "run_id": run_id,
+            "adapter": row[0],
+            "status": row[1],
+            "state": row[2],
+            "events": [event[0] for event in events],
+            "result": json.loads(row[3]) if row[3] else None,
+            "error": row[4],
+        }
+
     @contextmanager
     def _connect(self) -> Iterator[sqlite3.Connection]:
         connection = sqlite3.connect(self._database_path)
@@ -254,6 +321,22 @@ class SQLiteRunStore:
                 CREATE TABLE IF NOT EXISTS approvals (
                     approval_id TEXT PRIMARY KEY,
                     payload TEXT NOT NULL
+                );
+
+                CREATE TABLE IF NOT EXISTS live_runs (
+                    run_id TEXT PRIMARY KEY,
+                    adapter TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    state TEXT NOT NULL,
+                    result TEXT,
+                    error TEXT
+                );
+
+                CREATE TABLE IF NOT EXISTS run_events (
+                    sequence INTEGER PRIMARY KEY AUTOINCREMENT,
+                    run_id TEXT NOT NULL,
+                    state TEXT NOT NULL,
+                    FOREIGN KEY (run_id) REFERENCES live_runs (run_id)
                 );
                 """
             )

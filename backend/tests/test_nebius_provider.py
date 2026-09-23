@@ -121,6 +121,28 @@ def test_nebius_provider_sends_structured_request_and_parses_hypotheses() -> Non
     assert "train.py" in request_body["messages"][1]["content"]
 
 
+def test_nebius_provider_can_request_json_object_for_model_compatibility() -> None:
+    seen_format: dict[str, object] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen_format.update(json.loads(request.content)["response_format"])
+        content = json.dumps({"hypotheses": [_hypothesis().model_dump(mode="json")]})
+        return httpx.Response(200, json={"choices": [{"message": {"content": content}}]})
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    provider = NebiusTokenFactoryProvider(
+        api_key="test-only-key",
+        model="nvidia/test-nemotron",
+        response_format="json_object",
+        client=client,
+    )
+    try:
+        assert asyncio.run(provider.propose_hypotheses(_context())) == [_hypothesis()]
+    finally:
+        asyncio.run(client.aclose())
+    assert seen_format == {"type": "json_object"}
+
+
 def test_nebius_provider_rejects_ungrounded_hypothesis() -> None:
     content = json.dumps(
         {"hypotheses": [_hypothesis(evidence_id="evidence_invented").model_dump(mode="json")]}
@@ -179,3 +201,46 @@ def test_nebius_constructor_requires_https() -> None:
             model="nvidia/test-nemotron",
             base_url="http://example.invalid/v1",
         )
+
+    with pytest.raises(ProviderConfigurationError, match="NEBIUS_API_KEY"):
+        NebiusTokenFactoryProvider(api_key="", model="nvidia/test-nemotron")
+    with pytest.raises(ProviderConfigurationError, match="NEBIUS_MODEL"):
+        NebiusTokenFactoryProvider(api_key="test-only-key", model="")
+
+
+def test_nebius_provider_surfaces_http_failure() -> None:
+    client = httpx.AsyncClient(transport=httpx.MockTransport(lambda _request: httpx.Response(503)))
+    provider = NebiusTokenFactoryProvider(
+        api_key="test-only-key", model="nvidia/test-nemotron", client=client
+    )
+    try:
+        with pytest.raises(ProviderResponseError, match="Nebius request failed"):
+            asyncio.run(provider.propose_hypotheses(_context()))
+    finally:
+        asyncio.run(client.aclose())
+
+
+def test_nebius_provider_rejects_wrong_objective_metric() -> None:
+    hypothesis = _hypothesis().model_copy(
+        update={
+            "expected_outcome": MetricExpectation(
+                metric="accuracy", direction=MetricDirection.MAXIMIZE, minimum_delta=0
+            )
+        }
+    )
+    content = json.dumps({"hypotheses": [hypothesis.model_dump(mode="json")]})
+    client = httpx.AsyncClient(
+        transport=httpx.MockTransport(
+            lambda _request: httpx.Response(
+                200, json={"choices": [{"message": {"content": content}}]}
+            )
+        )
+    )
+    provider = NebiusTokenFactoryProvider(
+        api_key="test-only-key", model="nvidia/test-nemotron", client=client
+    )
+    try:
+        with pytest.raises(ProviderResponseError, match="outside the objective"):
+            asyncio.run(provider.propose_hypotheses(_context()))
+    finally:
+        asyncio.run(client.aclose())
