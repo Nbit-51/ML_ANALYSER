@@ -96,14 +96,21 @@ class RepositoryContextTool:
 
         # Rank by overlap with the requested metric and matching result filenames,
         # without assuming the repository is a classifier, trainer, or inference engine.
-        context_tokens = set(self._tokens(metric))
+        context_tokens = set(self._tokens(" ".join(metrics)))
+        context_tokens.update({"benchmark", "config", "test", "main", "build"})
         for result_path, *_ in matched_results[:2]:
             context_tokens.update(self._tokens(Path(result_path).stem))
         source_candidates = sorted(
             (
                 item
                 for item in inventory.files
-                if item.category is FileCategory.SOURCE
+                if item.category
+                in {FileCategory.SOURCE, FileCategory.TEST, FileCategory.CONFIGURATION}
+                and not {part.lower() for part in Path(item.path).parts} & {"results", "metrics"}
+                and item.path not in {record.source for record in evidence}
+                and not any(
+                    term in item.path.lower() for term in ("secret", "credential", ".env", "lock")
+                )
                 and Path(item.path).stem.casefold() != "__init__"
             ),
             key=lambda item: (
@@ -112,7 +119,7 @@ class RepositoryContextTool:
                 item.path,
             ),
         )
-        for item in source_candidates[:2]:
+        for item in source_candidates[:6]:
             contents = self._read(root, item.path, MAX_FILE_BYTES)
             if contents is not None:
                 text, digest = contents
@@ -139,7 +146,10 @@ class RepositoryContextTool:
                 or path.stat().st_size > max_bytes
             ):
                 return None
-            contents = path.read_bytes()
+            with path.open("rb") as handle:
+                contents = handle.read(max_bytes + 1)
+            if len(contents) > max_bytes:
+                return None
         except OSError:
             return None
         if b"\x00" in contents:
@@ -185,5 +195,5 @@ class RepositoryContextTool:
             claim=claim,
             source=path,
             content_hash=digest,
-            metadata={"recorded_metrics_json": metrics_json} if metrics_json else {},
+            metadata={"recorded_metrics_json": metrics_json, "model_context": True},
         )

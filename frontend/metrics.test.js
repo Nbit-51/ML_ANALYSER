@@ -22,8 +22,9 @@ test("preserves useful precision in recorded values", () => {
 });
 
 test("interprets improvement only in the chosen direction", () => {
-  assert.match(metrics.interpretMetricChange(0.7, 0.8, "f1"), /favorable/);
-  assert.match(metrics.interpretMetricChange(10, 12, "p95_latency_ms"), /unfavorable/);
+  assert.match(metrics.interpretMetricChange(0.7, 0.8, "f1", "maximize"), /favorable/);
+  assert.match(metrics.interpretMetricChange(10, 12, "p95_latency_ms", "minimize"), /unfavorable/);
+  assert.match(metrics.interpretMetricChange(10, 12, "p95_latency_ms"), /check this project's/);
   assert.match(metrics.interpretMetricChange(2, 3, "custom_score"), /check this project's metric definition/);
 });
 

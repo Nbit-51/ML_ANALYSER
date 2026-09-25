@@ -1,0 +1,12 @@
+{
+  "adapter": "ml_training",
+  "project_path": "ml-regression-demo",
+  "success_contract": {
+    "objective": {
+      "metric": "validation_rmse",
+      "direction": "minimize",
+      "target": 0.1,
+      "minimum_improvement": 1
+    }
+  }
+}

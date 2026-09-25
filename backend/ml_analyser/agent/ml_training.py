@@ -29,7 +29,6 @@ from ml_analyser.agent.models import (
     Hypothesis,
     HypothesisKind,
     Measurement,
-    MetricDirection,
     ProjectStateGraph,
     RepositoryInventory,
     ResourceUsage,
@@ -110,11 +109,11 @@ class MlTrainingPipeline:
         project_root: Path,
         success_contract: SuccessContract,
     ) -> MlTrainingPrepareResult:
-        self._validate_contract(success_contract)
         inventory = self._inspector.inspect(str(project_root))
         graph = InventoryStateGraphBuilder().build(project_id, inventory)
         fingerprint = self._fingerprint(project_id, inventory)
         manifest = self._adapter.load_manifest(project_root)
+        self._validate_contract(success_contract, manifest)
         run_id = str(uuid4())
         evidence = EvidenceRecord(
             id=stable_id("evidence", run_id, "ml-inventory"),
@@ -318,15 +317,13 @@ class MlTrainingPipeline:
             ):
                 self._workspaces.discard(candidate_handle)
 
-    def _validate_contract(self, contract: SuccessContract) -> None:
+    def _validate_contract(self, contract: SuccessContract, manifest: MlTrainingManifest) -> None:
         requested = {
             contract.objective.metric,
             *(constraint.metric for constraint in contract.constraints),
         }
-        if not requested.issubset(self._adapter.supported_metrics):
+        if not requested.issubset({m.name for m in manifest.metric_definitions}):
             raise MlTrainingError("ML training contract contains unsupported metrics")
-        if contract.objective.direction is not MetricDirection.MAXIMIZE:
-            raise MlTrainingError("ML training objective must maximize a metric")
 
     @staticmethod
     def _fingerprint(project_id: str, inventory: RepositoryInventory) -> str:

@@ -6,6 +6,8 @@
   <title>ML Analyser | Experiment workbench</title>
   <link rel="stylesheet" href="/static/styles.css">
   <script src="/static/metrics.js" defer></script>
+  <script src="/static/analytics.js" defer></script>
+  <script src="/static/workbench.js" defer></script>
   <script src="/static/app.js" defer></script>
   <script src="/static/analysis.js" defer></script>
 </head>
@@ -18,18 +20,18 @@
     <section class="hero">
       <div class="eyebrow">EXPERIMENT WORKBENCH</div>
       <h1>Controlled experiments.<br><em>Measured outcomes.</em></h1>
-      <p>Inspect an ML repository, define the outcome you care about, and review evidence-backed hypotheses. Run controlled experiments when an adapter supports the project.</p>
+      <p>Inspect a repository, define the outcome you care about, and review evidence-backed hypotheses. Run controlled experiments when an adapter supports the project.</p>
       <div class="hero-steps"><span>01 · Diagnose</span><span>02 · Approve</span><span>03 · Measure</span><span>04 · Decide</span></div>
     </section>
 
     <section class="panel repository-analysis" aria-labelledby="analysis-title">
-      <div class="section-heading"><span class="section-number">01</span><div><p class="kicker">REPOSITORY ANALYSIS</p><h2 id="analysis-title">Analyse an ML repository</h2></div></div>
+      <div class="section-heading"><span class="section-number">01</span><div><p class="kicker">REPOSITORY ANALYSIS</p><h2 id="analysis-title">Repository overview</h2></div></div>
       <p class="analysis-intro">Choose any local repository folder inside <code>workspaces/</code>. The preview inventories files, reads a few relevant excerpts and prior result records, and proposes tests. It does not run project code.</p>
       <p class="analysis-intro">With the Nebius provider enabled, sampled repository excerpts and result records are sent to Nebius for reasoning. Do not preview a private repository until you are comfortable sharing those excerpts. Model proposals may contain unsupported implementation details; verify the cited code before acting.</p>
       <div class="score-guide"><strong>How to read the goal</strong><p>The objective is the score you want to improve. A target is the desired value. A guardrail is a limit another score must respect. A proposal becomes a measured improvement only after a compatible experiment runs.</p></div>
       <form id="analysis-form" class="analysis-form">
         <label class="field field-wide">Project folder inside workspaces
-          <input id="analysis-path" name="project_path" placeholder="my-ml-project" required autocomplete="off" spellcheck="false">
+          <input id="analysis-path" name="project_path" placeholder="my-project" required autocomplete="off" spellcheck="false">
         </label>
         <label class="field">Objective metric
           <input id="analysis-metric" name="metric" placeholder="e.g. f1, validation_rmse, p50_latency_ms" required autocomplete="off" spellcheck="false">
@@ -58,6 +60,7 @@
       <div id="analysis-output" class="analysis-output hidden" aria-live="polite">
         <div class="analysis-summary"><strong id="analysis-status"></strong><span id="analysis-provider"></span></div>
         <div class="analysis-note" id="analysis-metric-guide"></div>
+        <div id="repository-overview"></div>
         <div id="analysis-counts" class="analysis-counts"></div>
         <div id="analysis-recorded" class="analysis-recorded"></div>
         <div class="analysis-columns"><div><h3>Hypotheses to test</h3><div id="analysis-hypotheses"></div></div><div><h3>Proposed experiments</h3><div id="analysis-experiments"></div></div></div>
@@ -73,6 +76,7 @@
           <label class="adapter-card selected"><input type="radio" name="adapter" value="ml-training" checked><span class="card-icon">◈</span><strong>ML training</strong><small>Hidden learning rate failure · validation F1</small></label>
           <label class="adapter-card"><input type="radio" name="adapter" value="backend-benchmark"><span class="card-icon">▤</span><strong>Backend benchmark</strong><small>Slow response config · P95 latency</small></label>
         </div>
+        <label class="adapter-card"><input type="radio" name="adapter" value="generic-process"><strong>General CLI benchmark</strong><small>Declared harness · Linux sandbox required</small></label>
         <div class="contract" id="contract"></div>
         <button class="primary-button" id="prepare-button" type="button">Inspect & prepare experiment <span>→</span></button>
         <p class="fine-print">Preparation inventories the repository and produces a reviewable plan. It does not run project code.</p>
@@ -88,6 +92,8 @@
           <p id="hypothesis"></p>
           <div class="plan-detail"><strong>Proposed change</strong><ul id="changes"></ul></div>
           <div class="plan-detail"><strong>Rejection rule</strong><p id="rejection"></p></div>
+          <details><summary>Exact command, configuration, contract and approval scope</summary><pre id="plan-json"></pre></details>
+          <p id="execution-readiness" class="fine-print"></p>
           <button class="approve-button" id="approve-button" type="button">Approve exact plan & start <span>→</span></button>
           <p class="fine-print">Approval is bound to this plan fingerprint and can be used once.</p>
         </div>
@@ -98,8 +104,14 @@
     <section class="panel results hidden" id="results" aria-labelledby="results-title">
       <div class="section-heading"><span class="section-number">04</span><div><p class="kicker">MEASURED OUTCOME</p><h2 id="results-title">Evidence & decision</h2></div><span id="decision-pill" class="decision-pill"></span></div>
       <p class="decision-reason" id="decision-reason"></p>
+      <div id="result-overview"></div>
+      <h3>Baseline vs candidate</h3><p class="chart-legend">Blue: baseline · Teal: candidate · Direction comes from declarations</p>
       <div class="metric-grid" id="metrics"></div>
+      <h3>Objectives & guardrails</h3><div id="guardrails" class="table-scroll"></div>
+      <h3>Benchmark reliability</h3><div id="reliability"></div>
+      <h3>Recorded artifacts</h3><div id="artifacts"></div>
       <div class="result-columns"><div><h3>Evidence ledger</h3><div id="evidence"></div></div><div><h3>Experiment lineage</h3><div id="lineage"></div><h3>Change disposition</h3><p id="disposition"></p></div></div>
+      <h3>Final report · persisted evidence</h3><details><summary>Methodology, reproduction and limitations</summary><pre id="final-report"></pre></details>
     </section>
   </main>
   <footer><span>ML Analyser</span><span>Measured outcomes. Traceable decisions.</span></footer>

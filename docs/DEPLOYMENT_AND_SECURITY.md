@@ -10,7 +10,13 @@ The FastAPI `BackgroundTasks` implementation is deliberately local. A process re
 
 Repository inventory and preview are read-only; they do not import target code. The executable ML and backend adapters run a manifest-declared Python entrypoint from a copied workspace after fingerprint-bound, single-use approval. They validate paths, reject symlinks, use the current interpreter's isolated mode, avoid a shell, allowlist process environment variables, and apply candidate changes only to declared JSON configuration keys. Baseline and candidate measurements are independently recorded, then accepted candidates remain isolated for review; the original source is not promoted or overwritten.
 
-**A copied directory is not a security sandbox.** Python project code may still read accessible host files, start other processes, or access the network. Only trusted fixtures or repositories should be executed on the developer machine. For untrusted repositories, use a separately provisioned container or VM with no ambient credentials, restricted filesystem and egress, non-root identity, and enforced CPU/memory/disk/time limits. Approval is a policy gate, not containment.
+**A copied directory is not a security sandbox.** The legacy ML and HTTP runners may still read accessible host files, start other processes, or access the network. Only trusted fixtures or repositories should use those runners on the developer machine. Approval is a policy gate, not containment.
+
+## Declared generic process execution
+
+The `generic_process` adapter requires Linux and bubblewrap and fails closed when containment is unavailable. It uses separate namespaces, denies external network access, exposes repository copies read-only, mounts only exact declared new output files writable, clears ambient environment variables, and runs argv without a shell. CPU, memory, file-size, descriptor and process limits are applied inside the namespace; the parent enforces wall-time and captured-output limits. Windows supports generic preview and preparation but does not automatically dispatch execution to WSL.
+
+These limits are per process rather than aggregate cgroup accounting. System runtimes remain visible, host namespace policy must permit bubblewrap, and this prototype has not been established as a multi-tenant hostile-code service. For untrusted shared workloads, use a separately provisioned, reviewed worker/container or VM with no credentials and aggregate quotas. See [the benchmark protocol](GENERIC_BENCHMARKS.md) for the exact implemented boundary.
 
 ## Data and credential handling
 
@@ -22,7 +28,7 @@ Repository inventory and preview are read-only; they do not import target code. 
 ## Operational checks before a shared deployment
 
 1. Add authentication and project-level authorization for approvals, run reads, artifacts, and retained candidates.
-2. Put the runner behind an actual OS/container isolation boundary and deny outbound network by default.
+2. Move legacy runners behind OS/container isolation; review the generic sandbox boundary and add aggregate quotas before shared hostile-code execution.
 3. Move background execution to a durable queue and define recovery behavior for interrupted runs.
 4. Record structured run/experiment IDs, durations, provider errors, actual usage, and terminal states; redact secrets and sensitive repository content.
 5. Define retention and cleanup policies for SQLite, logs, metrics files, and isolated copies.

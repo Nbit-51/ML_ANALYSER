@@ -11,7 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 class StrictModel(BaseModel):
     """Base model that rejects unknown input fields."""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
 
 
 class RunState(StrEnum):
@@ -126,10 +126,22 @@ class GraphNodeType(StrEnum):
     PROJECT = "project"
     CATEGORY = "category"
     FILE = "file"
+    CAPABILITY = "capability"
+    LANGUAGE = "language"
+    EXPERIMENT = "experiment"
+    MEASUREMENT = "measurement"
+    ARTIFACT = "artifact"
 
 
 class GraphEdgeType(StrEnum):
     CONTAINS = "contains"
+    USES = "uses"
+    CONFIGURES = "configures"
+    TESTS = "tests"
+    MEASURES = "measures"
+    PRODUCES = "produces"
+    DEPENDS_ON = "depends_on"
+    GENERATED_BY = "generated_by"
 
 
 MetadataValue = str | int | float | bool | None
@@ -146,6 +158,9 @@ class ProjectEdge(StrictModel):
     source_id: str
     target_id: str
     type: GraphEdgeType
+    provenance: str = "detected"
+    confidence: float = Field(default=1, ge=0, le=1)
+    evidence_ids: list[str] = Field(default_factory=list)
 
 
 class ProjectStateGraph(StrictModel):
@@ -242,11 +257,88 @@ class ExperimentSpec(StrictModel):
     status: ExperimentStatus = ExperimentStatus.COMPILED
 
 
+class MetricDefinition(StrictModel):
+    name: str = Field(min_length=1, max_length=120)
+    label: str | None = None
+    unit: str | None = Field(default=None, max_length=40)
+    direction: MetricDirection | None = None
+    minimum: float | None = None
+    maximum: float | None = None
+
+
+class SampleSummary(StrictModel):
+    count: int = Field(ge=1)
+    mean: float
+    median: float
+    minimum: float
+    maximum: float
+    p50: float
+    p90: float
+    p95: float
+    p99: float
+    standard_deviation: float = Field(ge=0)
+    coefficient_of_variation: float | None = None
+
+
+class ArtifactRecord(StrictModel):
+    id: str
+    path: str
+    sha256: str
+    size_bytes: int = Field(ge=0)
+    evidence_ids: list[str] = Field(default_factory=list)
+    content_base64: str
+
+
 class Measurement(StrictModel):
     metric: str = Field(min_length=1, max_length=120)
-    value: float
+    value: float = Field(strict=True)
     unit: str | None = Field(default=None, max_length=40)
     evidence_ids: list[str] = Field(min_length=1)
+    label: str | None = None
+    direction: MetricDirection | None = None
+    raw_samples: list[float] = Field(default_factory=list, max_length=10000)
+    reliability_samples: list[float] = Field(default_factory=list, max_length=10000)
+    summary: SampleSummary | None = None
+    warmup_count: int = Field(default=0, ge=0)
+    failed_sample_count: int = Field(default=0, ge=0)
+    observed_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    environment_fingerprint: str | None = None
+    artifact_ids: list[str] = Field(default_factory=list)
+
+
+class BenchmarkReliability(StrictModel):
+    status: str = "not_assessed"
+    reasons: list[str] = Field(default_factory=list)
+    minimum_samples: int = 3
+    maximum_cv: float = 0.30
+    environment_compatible: bool | None = None
+    statistical_significance_tested: bool = False
+
+
+class Capability(StrictModel):
+    id: str
+    name: str
+    kind: str
+    provenance: str
+    confidence: float = Field(ge=0, le=1)
+    evidence_ids: list[str]
+    paths: list[str]
+
+
+class AdapterReadiness(StrictModel):
+    adapter: str
+    status: str
+    reason: str
+    profiles: list[str] = Field(default_factory=list)
+    required_configuration: str | None = None
+    supported_measurements: list[str] = Field(default_factory=list)
+
+
+class RepositorySummary(StrictModel):
+    composition_basis: str = "bytes of inventoried source files"
+    language_bytes: dict[str, int] = Field(default_factory=dict)
+    capabilities: list[Capability] = Field(default_factory=list)
+    adapters: list[AdapterReadiness] = Field(default_factory=list)
 
 
 class ResourceUsage(StrictModel):
@@ -291,6 +383,7 @@ class DecisionRecord(StrictModel):
     budget: BudgetEvaluation
     reason: str
     evidence_ids: list[str] = Field(default_factory=list)
+    benchmark_reliability: BenchmarkReliability = Field(default_factory=BenchmarkReliability)
 
 
 class ApprovalRecord(StrictModel):
@@ -326,3 +419,5 @@ class PreviewRunResult(StrictModel):
     hypotheses: list[Hypothesis]
     experiments: list[ExperimentSpec]
     warnings: list[str]
+    repository_summary: RepositorySummary = Field(default_factory=RepositorySummary)
+    success_contract: SuccessContract | None = None

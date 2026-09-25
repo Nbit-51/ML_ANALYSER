@@ -16,6 +16,7 @@ from urllib.request import urlopen
 
 from pydantic import Field, field_validator
 
+from ml_analyser.agent.measurements import environment_fingerprint
 from ml_analyser.agent.models import MetadataValue, StrictModel
 
 MANIFEST_NAME = "backend_benchmark.json"
@@ -34,6 +35,8 @@ class BackendBenchmarkManifest(StrictModel):
     health_path: str = "/health"
     benchmark_path: str = "/benchmark"
     requests: int = Field(default=25, ge=5, le=500)
+    warmup_requests: int = Field(default=3, ge=0, le=100)
+    repetitions: int = Field(default=3, ge=1, le=10)
     startup_timeout_seconds: float = Field(default=5.0, gt=0.0, le=30.0)
     request_timeout_seconds: float = Field(default=2.0, gt=0.0, le=10.0)
 
@@ -64,6 +67,13 @@ class BackendObservation(StrictModel):
     response_hash: str | None
     stdout_tail: str = ""
     stderr_tail: str = ""
+    raw_latency_samples: list[float] = Field(default_factory=list)
+    p99_latency_ms: float = 0
+    warmup_count: int = 0
+    repetitions: int = 1
+    latency_rounds: list[list[float]] = Field(default_factory=list)
+    environment_fingerprint: str | None = None
+    response_bytes: int = 0
 
 
 class BackendHttpBenchmarkAdapter:
@@ -76,6 +86,9 @@ class BackendHttpBenchmarkAdapter:
             "mean_latency_ms",
             "p50_latency_ms",
             "p95_latency_ms",
+            "p99_latency_ms",
+            "successful_requests",
+            "response_bytes",
             "response_hash_matches",
             "throughput_requests_per_second",
         }
@@ -84,6 +97,8 @@ class BackendHttpBenchmarkAdapter:
     def load_manifest(self, project_root: Path) -> BackendBenchmarkManifest:
         root = project_root.resolve(strict=True)
         manifest_path = root / MANIFEST_NAME
+        if manifest_path.is_symlink():
+            raise BackendAdapterError("manifest symlinks are not permitted")
         if not manifest_path.is_file():
             raise BackendAdapterError(f"missing required manifest: {MANIFEST_NAME}")
         try:
@@ -140,24 +155,34 @@ class BackendHttpBenchmarkAdapter:
             latencies: list[float] = []
             response_hashes: list[str] = []
             errors = 0
+            response_bytes = 0
+            for _ in range(manifest.warmup_requests):
+                try:
+                    with urlopen(
+                        f"http://127.0.0.1:{port}{manifest.benchmark_path}",
+                        timeout=manifest.request_timeout_seconds,
+                    ) as response:
+                        response.read(1048577)
+                except (OSError, URLError):
+                    pass
             benchmark_started = time.perf_counter()
-            for _ in range(manifest.requests):
+            for _ in range(manifest.requests * manifest.repetitions):
                 started = time.perf_counter()
                 try:
                     with urlopen(  # noqa: S310 - fixed localhost URL generated below
                         f"http://127.0.0.1:{port}{manifest.benchmark_path}",
                         timeout=manifest.request_timeout_seconds,
                     ) as response:
-                        body = response.read()
-                        if response.status != 200:
+                        body = response.read(1048577)
+                        if response.status != 200 or len(body) > 1048576:
                             errors += 1
                             continue
                         response_hashes.append(sha256(body).hexdigest())
+                        response_bytes += len(body)
                 except (OSError, URLError):
                     errors += 1
                     continue
-                finally:
-                    latencies.append((time.perf_counter() - started) * 1_000)
+                latencies.append((time.perf_counter() - started) * 1_000)
             elapsed = time.perf_counter() - benchmark_started
         finally:
             process.terminate()
@@ -167,7 +192,8 @@ class BackendHttpBenchmarkAdapter:
                 process.kill()
                 stdout, stderr = process.communicate(timeout=3)
 
-        successful = manifest.requests - errors
+        total_requests = manifest.requests * manifest.repetitions
+        successful = total_requests - errors
         if successful == 0 or not response_hashes:
             raise BackendAdapterError(
                 "all benchmark requests failed; "
@@ -175,19 +201,29 @@ class BackendHttpBenchmarkAdapter:
             )
         ordered = sorted(latencies)
         return BackendObservation(
-            requests=manifest.requests,
+            requests=total_requests,
             successful_requests=successful,
             error_count=errors,
-            error_rate=errors / manifest.requests,
+            error_rate=errors / total_requests,
             p50_latency_ms=self._percentile(ordered, 0.50),
             p95_latency_ms=self._percentile(ordered, 0.95),
             mean_latency_ms=sum(ordered) / len(ordered),
-            throughput_requests_per_second=manifest.requests / elapsed if elapsed else 0.0,
+            throughput_requests_per_second=successful / elapsed if elapsed else 0.0,
             response_hash=(
                 response_hashes[0] if len(set(response_hashes)) == 1 else "inconsistent"
             ),
             stdout_tail=self._tail(stdout),
             stderr_tail=self._tail(stderr),
+            raw_latency_samples=latencies,
+            p99_latency_ms=self._percentile(ordered, 0.99),
+            warmup_count=manifest.warmup_requests,
+            repetitions=manifest.repetitions,
+            latency_rounds=[
+                latencies[i : i + manifest.requests]
+                for i in range(0, len(latencies), manifest.requests)
+            ],
+            environment_fingerprint=environment_fingerprint(),
+            response_bytes=response_bytes,
         )
 
     @staticmethod

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
+from ml_analyser.agent.measurements import assess_reliability
 from ml_analyser.agent.models import (
     BudgetEvaluation,
     ComputeBudget,
@@ -54,6 +55,18 @@ class DecisionEvaluator:
 
         baseline_objective = baseline_by_metric[contract.objective.metric]
         candidate_objective = candidate_by_metric[contract.objective.metric]
+        reliability = assess_reliability(
+            list(baseline_by_metric.values()), list(candidate_by_metric.values()), required_metrics
+        )
+        if reliability.reasons:
+            return DecisionRecord(
+                experiment_id=experiment_id,
+                status=DecisionStatus.INCONCLUSIVE,
+                budget=budget,
+                reason="; ".join(reliability.reasons),
+                benchmark_reliability=reliability,
+                evidence_ids=self._evidence_ids(baseline_by_metric, candidate_by_metric),
+            )
         if baseline_objective.unit != candidate_objective.unit:
             return DecisionRecord(
                 experiment_id=experiment_id,
@@ -93,6 +106,7 @@ class DecisionEvaluator:
                 else f"Rejected because the {', '.join(failed_parts)} check failed."
             ),
             evidence_ids=self._evidence_ids(baseline_by_metric, candidate_by_metric),
+            benchmark_reliability=reliability,
         )
 
     @staticmethod

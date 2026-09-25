@@ -1,0 +1,16 @@
+{
+  "adapter": "ml_training",
+  "entrypoint": "train.py",
+  "config_file": "config.json",
+  "candidate_overrides": {
+    "bias": 0.0
+  },
+  "metric_definitions": [
+    {
+      "name": "validation_rmse",
+      "unit": "target_units",
+      "direction": "minimize",
+      "minimum": 0
+    }
+  ]
+}

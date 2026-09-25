@@ -1,194 +1,42 @@
-# Project Context
+# Project context
 
-## Purpose
+## Product intent
 
-ML Analyser is an autonomous evidence-driven optimization agent for the Nebius x NVIDIA Global AI Hackathon 2026. Its purpose is to diagnose failures in an ML project, design and safely execute controlled experiments, and retain changes only when they are supported by empirical evidence. The ML preview accepts user-defined metrics across ML tasks; a smaller backend benchmark adapter demonstrates reuse of the core engine.
+Preserve the evidence-driven verification architecture: a machine-readable success contract, falsifiable hypotheses, explicit approval, isolated experiments, deterministic measurement evaluation, an append-only ledger and persistent lineage. ML remains the flagship domain; the engine also supports declared non-ML process benchmarks.
 
-Repository analysis is an input capability, not the product's central innovation. The defensible product is the closed loop of structured project state, falsifiable hypotheses, reproducible and reversible execution, constraint-aware evaluation, persistent experiment lineage, and adaptive experiment selection. The category distinction is intentional: coding agents optimize code; this system optimizes measurable outcomes.
+AI-generated claims are hypotheses until measured. Preview, prior files, and provider estimates must never be displayed as executed results. Nemotron through Nebius is the real optional reasoning provider; the default mock provider is deterministic and offline. Neither decides numeric acceptance or supplies measurements.
 
-This document is the durable handoff for product constraints and architectural decisions. Update it whenever a major decision changes.
+## Current implementation
 
-## Product goals
+- FastAPI, Pydantic, SQLite and a lightweight JavaScript/SVG workbench; no framework migration or distributed infrastructure.
+- Generic prepare/execute/start paths dispatch through `AdapterRegistry`; existing ML/HTTP endpoints remain compatible.
+- Capability facts and deterministic graphs carry provenance/evidence; language composition explicitly means source-file bytes.
+- ML manifests can declare arbitrary finite metrics and units, bounds and direction. Classification defaults remain backward compatible. A regression fixture demonstrates minimization.
+- General process manifests define argv, working directory, optional build/test commands, output protocol, metrics, repetitions, warm-ups, resource limits, environment/output allowlists and JSON candidate overrides.
+- Linux bubblewrap is required for generic execution. Windows API processes expose preview/configuration readiness; there is no unsandboxed fallback. WSL can run the API and tests as a Linux host.
+- Generic samples alternate execution order. HTTP uses warm-ups and repeated sequential batches; successful-request samples and failure counts remain separate.
+- Reliability rules are deterministic: required repeated comparisons need compatible units/environments, >=3 samples, zero failed samples and CV <=0.30. Raw samples remain visible. No statistical significance is claimed.
+- Generic API results and reports are serialized into immutable evidence and read back. Evidence links and experiment parent relationships are inspectable.
+- The workbench renders arbitrary metrics, deltas, sample distributions, guardrails, reliability, capabilities, lineage and persisted reports.
 
-The system should eventually be able to:
+## Fixtures and testing
 
-1. accept a technical repository, prior runs, a machine-readable success contract, and a project workspace;
-2. build a state graph across data, code, configuration, models, checkpoints, metrics, and experiments;
-3. diagnose likely failure modes without overstating certainty;
-4. express each candidate explanation as a falsifiable hypothesis;
-5. compile the smallest useful experiment that can test that hypothesis;
-6. choose experiments by expected information gain/value, risk, and multidimensional budget;
-7. execute approved experiments in a constrained environment;
-8. preserve commands, outputs, metrics, errors, costs, and artifacts as evidence;
-9. evaluate candidates against objectives and regression guardrails;
-10. accept or reject hypotheses, keep or revert provisional changes, and adaptively select follow-up experiments;
-11. preserve model lineage in an experiment DAG; and
-12. produce a clear, reproducible engineering optimization report, specialized as an ML engineering report for the flagship adapter.
+Classification training, custom regression, saved-threshold predictions, HTTP, generic CLI and build/test fixtures are committed. All are small and offline. Linux integration tests run CLI, test-suite, build and microbenchmark profiles through preparation, approval and real sandbox execution; they assert accepted, rejected and inconclusive decisions and unchanged source files. Windows skips Linux-only integration tests explicitly.
 
-The core vocabulary is domain-neutral: goal, metric, constraint, hypothesis, experiment, observation, and decision. Domain adapters define project-specific inventory, interventions, measurements, and comparison rules.
+The CLI acceptance objective is instrumented redundant work count, not fabricated latency. The harness separately measures elapsed time and the adapter can measure full command duration. Test doubles are used in protocol unit tests and are separate from real Linux execution tests.
 
-## Scope strategy
+CI retains the 90% coverage requirement and includes the new frontend transformation tests. Exact local validation commands/results are recorded in `docs/IMPLEMENTATION_VALIDATION.md` after final checks.
 
-Broad architecture must not become an unbounded “improve any codebase” promise. The hackathon implementation targets:
+## Deliberate limits
 
-1. a fully functional ML adapter and strongest demo;
-2. a smaller functional backend/software benchmark adapter proving the core loop generalizes; and
-3. an AI-agent evaluation adapter only as a prototype or stretch goal.
+- Local ML/HTTP runners are trusted demos, not hardened execution of hostile scripts.
+- Generic sandbox resource limits are per process; aggregate accounting is not available. It rejects CPU/GPU aggregate budget contracts it cannot measure.
+- Generic writable paths are exact new files. Build ecosystems needing arbitrary writable directory trees/caches or downloads require additional adapter work.
+- Capabilities are conservative static heuristics. Recognized build systems do not establish native ecosystem execution support.
+- Repeated ML training, HTTP concurrency/interleaving, statistical significance testing, cancellation/recovery, production scheduling and source promotion are future work.
+- Correctness signatures come from the harness and cannot establish the harness's correctness by themselves.
+- CPU/GPU/cost usage is not instrumented. Resource fields inherited from the prototype must be read with the report's accounting limitations.
 
-Examples of later adapters could include data pipelines, inference services, web performance, and scientific notebooks, but they are not MVP commitments.
+## Configuration
 
-## Hackathon constraints
-
-- Target track: Best Apps & Agents.
-- Nebius infrastructure/Token Factory must be used.
-- At least one NVIDIA open-source model must be used.
-- The initial primary reasoning target is an NVIDIA Nemotron model through Nebius.
-- The demonstration must show a genuine multi-step agent, not a thin chat or API wrapper.
-
-## Current phase
-
-**Phase 3: two executable adapters, general repository preview, and local run workbench.**
-
-Implemented through this phase:
-
-- repository conventions and ignore rules;
-- project and architecture documentation;
-- a FastAPI application with health, read-only preview, and approved ML demo endpoints;
-- strict domain models and provider/tool/evidence/persistence ports;
-- explicit run lifecycle transition enforcement;
-- bounded repository inventory and deterministic project state graph construction;
-- bounded read-only README, source, and prior-result sampling for arbitrary local repository previews;
-- a deterministic offline hypothesis provider and dry-run experiment compiler;
-- deterministic objective, guardrail, and multidimensional-budget evaluation;
-- an append-only SQLite evidence ledger and persistent experiment DAG;
-- a narrow classification-threshold adapter and reproducible hidden-failure fixture;
-- persisted fingerprint-bound approvals with explicit pending/approved/rejected/consumed states;
-- single-use authorization that rejects plan tampering and replay;
-- isolated baseline/candidate workspaces with deterministic retain/discard behavior;
-- a bounded backend HTTP benchmark adapter and non-ML fixture;
-- a declared Python training adapter and deterministic ML training fixture;
-- polling-based browser workbench with persisted run-state snapshots and events;
-- generic preview form with objective/guardrail entry, recorded-score provenance, and beginner metric interpretation;
-- an environment-configured Nebius Token Factory provider with structured-output and grounding validation;
-- a successful read-only live-provider smoke test and browser preview using Nemotron 3 Super through Nebius Token Factory on September 25, 2026;
-- automated API, security, provider-contract, persistence, evaluator, and end-to-end tests.
-
-Explicitly not implemented yet:
-
-- general-purpose command execution, container/VM sandboxing, or promotion of a retained candidate;
-- repository ingestion from remote URLs/uploads;
-- production experiment scheduling and recovery;
-- arbitrary training scripts without an explicit experiment manifest;
-- a general-purpose execution adapter for arbitrary ML repositories (preview is read-only; execution remains manifest-bound);
-- authentication;
-- durable worker scheduling, cancellation, and restart recovery;
-- domain adapters beyond the documented placeholders.
-
-## Guiding principles
-
-### Evidence before claims
-
-Findings must point to source material or tool output. Experiment conclusions must be derived from captured results. The report must distinguish observed facts, agent inferences, and proposed but untested work.
-
-### Explicit stages
-
-Diagnosis, hypothesis generation, experiment design, authorization, execution, measurement, decision, and reporting are separate lifecycle stages. A generated plan is not proof of execution.
-
-### Falsifiable work
-
-Every experimental proposal should name the intervention, expected metric effect, success threshold, protected guardrails, and conditions under which the hypothesis is rejected. Recommendations without a feasible test remain explicitly untested.
-
-### Adaptive, budget-aware selection
-
-The experiment sequence is not predetermined. The result of one experiment changes the expected value of the next. Selection should consider expected information gain or improvement, probability of success, risk, wall time, money, compute, tokens, and experiment count within a user-defined budget. A cheap diagnostic that separates competing explanations can be more valuable than an expensive likely improvement.
-
-### Persistent lineage, not chat memory
-
-An experiment DAG records parentage and complete reproducibility metadata. Disproven hypotheses are not casually repeated in later sessions; they may be reconsidered only when relevant code, data, configuration, or constraints change.
-
-### Changes are provisional
-
-Every modification is isolated and measured before it is retained. A passing test suite is a guardrail, not proof that the objective improved. Rejected or invalid experiments must leave the accepted project state unchanged and retain enough evidence to explain the decision.
-
-### Structured reasoning before expensive execution
-
-For costly experiments, the reasoning workflow should include diagnostic, skeptic, planner, and judge perspectives. These are structured responsibilities and may initially be separate prompts to one Nemotron provider rather than independent agent services. Deterministic policy code—not model confidence—has final authority over schemas, budgets, safety, and acceptance constraints.
-
-### Safe by default
-
-Input repositories, their scripts, and model-generated tool arguments are untrusted. Analysis begins read-only. Commands require validation, resource limits, workspace isolation, and an auditable policy decision before execution.
-
-### Provider independence
-
-Core orchestration depends on typed provider interfaces rather than a vendor SDK. This enables deterministic mock tests while retaining Nebius/NVIDIA as the primary production path.
-
-### Incremental delivery
-
-Each milestone should provide a testable vertical slice. Infrastructure complexity is added when a concrete product requirement needs it.
-
-## Initial technical decisions
-
-| Area | Decision | Rationale |
-| --- | --- | --- |
-| Backend | Python and FastAPI | Strong ML ecosystem, typed request handling, and rapid API development. |
-| Configuration | Environment variables through Pydantic Settings | Centralized validation without committing secrets. |
-| API layout | Versioned router under `/api/v1` | Allows future API evolution without mixing transport and domain logic. |
-| Agent design | Explicit state machine with typed ports | Makes multi-step behavior, retries, and failure states observable and testable. |
-| Success definition | Machine-readable objective, target, constraints, and budget | Replaces subjective “make it better” requests with verifiable completion conditions. |
-| Project understanding | Versioned project state graph | Connects code and data state to experiments instead of flattening the repository into prompts. |
-| Hypotheses | Structured, falsifiable records | Forces recommendations to define measurable support and rejection criteria. |
-| Experiments | Compiler plus persistent DAG | Makes runs reproducible, preserves lineage, and supports adaptive follow-up. |
-| Decisions | Objective plus hard regression guardrails | Prevents a gain in one metric from hiding an unacceptable regression elsewhere. |
-| Selection | Expected value/information under a multidimensional budget | Treats time, money, compute, tokens, and experiment slots as optimization constraints. |
-| Domain support | Domain-neutral core with ML-first adapters | Demonstrates generality without claiming universal codebase support. |
-| Change safety | Isolate, measure, then keep or revert | Prevents plausible model output from silently degrading the accepted project state. |
-| Model access | Deterministic mock plus configured Token Factory adapter | Enables offline tests while keeping Nebius/Nemotron as the live reasoning path. |
-| Evidence | Append-only records with artifact references | Prevents reports from silently losing provenance. |
-| Execution | Narrow adapters in copied workspaces; no shell; explicit limits | Provides a testable safety boundary without overstating local copies as a production sandbox. |
-| Frontend | Dependency-free HTML/CSS/JavaScript workbench served by FastAPI | Keeps the demo small, portable, and directly tied to run evidence. |
-| Progress | SQLite run snapshots and transition events; polling client | Makes each stage visible without introducing a broker before deployment needs one. |
-| Training execution | Explicit manifest, current Python in isolation mode, copied workspaces | Proves an actual train/evaluate loop while keeping the allowed command surface narrow. |
-
-These are initial decisions, not immutable commitments. Changes should be recorded here and expanded into architecture decision records if the tradeoff is significant.
-
-## Configuration and secrets
-
-The repository contains `.env.example` with empty placeholders. Real values must be supplied through a local ignored `.env` file or the deployment environment.
-
-The test suite forces the mock provider even when a developer has configured a private local `.env`, so routine tests never spend live inference credits.
-
-Provider variables include:
-
-- `ML_ANALYSER_MODEL_PROVIDER` (`mock` by default; `nebius` enables live inference)
-- `NEBIUS_API_KEY`
-- `NEBIUS_BASE_URL`
-- `NEBIUS_MODEL`
-- `ML_ANALYSER_NEBIUS_RESPONSE_FORMAT` (`json_schema` or `json_object`)
-
-No working credentials, fabricated credentials, or assumed model deployment IDs are included.
-
-## Success criteria for the demonstration
-
-A convincing end-to-end demo should show:
-
-- ingestion of a representative ML repository;
-- a visible multi-stage run with state transitions;
-- a state graph linking multiple project artifacts and previous results;
-- multiple falsifiable hypotheses for a deliberately hidden ML failure;
-- a constrained, budgeted choice of the next experiment;
-- at least one real controlled comparison or a transparently reported failed/skipped run;
-- rejection of an initially plausible hypothesis when evidence contradicts it;
-- acceptance of a later change only after objectives and guardrails pass;
-- a visible experiment DAG and evidence-linked final recommendation;
-- a final report with reproducible commands and artifact provenance;
-- NVIDIA Nemotron reasoning served via Nebius Token Factory;
-- a smaller non-ML benchmark flow demonstrating that success contracts and evidence decisions are reusable.
-
-## Near-term milestones
-
-1. Keep improving source-grounding checks for live model proposals; a schema-valid hypothesis can still make an unsupported implementation claim.
-2. Test the approved ML experiment flow with live reasoning and debug any model-specific schema or grounding issues.
-3. Add retained-candidate diff review and a separately approved promotion workflow.
-4. Add structured observability, cancellation/recovery, and production-grade sandbox integration.
-5. Prototype AI-agent evaluation only after the flagship demo is stable.
-6. Prepare repeatable deployment and presentation assets.
+`ML_ANALYSER_WORKSPACE_ROOT`, `ML_ANALYSER_EXECUTION_ROOT`, and `ML_ANALYSER_STATE_DATABASE` control local paths. Repository paths remain constrained to the configured workspace. `ML_ANALYSER_MODEL_PROVIDER=mock` is offline; `nebius` requires `NEBIUS_API_KEY` and `NEBIUS_MODEL`. Never print or commit credentials. Live preview sends bounded selected excerpts to Nebius; ordinary tests force mock reasoning.

@@ -9,6 +9,7 @@ from ml_analyser.agent.models import (
     ProjectStateGraph,
     RepositoryInventory,
 )
+from ml_analyser.tools.capabilities import detect_capabilities
 
 
 class InventoryStateGraphBuilder:
@@ -75,6 +76,55 @@ class InventoryStateGraphBuilder:
                 )
             )
 
+        summary, _ = detect_capabilities(inventory)
+        file_ids = {node.label: node.id for node in nodes if node.type is GraphNodeType.FILE}
+        for language, size in summary.language_bytes.items():
+            language_id = stable_id("language", project_id, language)
+            nodes.append(
+                ProjectNode(
+                    id=language_id,
+                    type=GraphNodeType.LANGUAGE,
+                    label=language,
+                    metadata={"size_bytes": size},
+                )
+            )
+            edges.append(
+                ProjectEdge(source_id=root_id, target_id=language_id, type=GraphEdgeType.USES)
+            )
+        for capability in summary.capabilities:
+            nodes.append(
+                ProjectNode(
+                    id=capability.id,
+                    type=GraphNodeType.CAPABILITY,
+                    label=capability.name,
+                    metadata={
+                        "kind": capability.kind,
+                        "provenance": capability.provenance,
+                        "confidence": capability.confidence,
+                    },
+                )
+            )
+            edges.append(
+                ProjectEdge(
+                    source_id=root_id,
+                    target_id=capability.id,
+                    type=GraphEdgeType.USES,
+                    provenance=capability.provenance,
+                    confidence=capability.confidence,
+                    evidence_ids=capability.evidence_ids,
+                )
+            )
+            for path in capability.paths:
+                edges.append(
+                    ProjectEdge(
+                        source_id=file_ids[path],
+                        target_id=capability.id,
+                        type=GraphEdgeType.CONFIGURES,
+                        provenance=capability.provenance,
+                        confidence=capability.confidence,
+                        evidence_ids=capability.evidence_ids,
+                    )
+                )
         return ProjectStateGraph(
             project_id=project_id,
             nodes=nodes,

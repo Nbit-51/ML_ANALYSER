@@ -10,7 +10,8 @@ from pathlib import Path
 
 from pydantic import Field, field_validator
 
-from ml_analyser.agent.models import MetadataValue, StrictModel
+from ml_analyser.adapters.process import unique_json
+from ml_analyser.agent.models import MetadataValue, MetricDefinition, StrictModel
 
 MANIFEST_NAME = "ml_experiment.json"
 SUPPORTED_METRICS = frozenset({"accuracy", "f1", "precision", "recall"})
@@ -27,6 +28,19 @@ class MlTrainingManifest(StrictModel):
     candidate_overrides: dict[str, MetadataValue]
     metrics_file: str = "metrics.json"
     timeout_seconds: int = Field(default=20, ge=1, le=120)
+    metric_definitions: list[MetricDefinition] = Field(
+        default_factory=lambda: [
+            MetricDefinition(name=name, unit="ratio", minimum=0, maximum=1)
+            for name in sorted(SUPPORTED_METRICS)
+        ]
+    )
+
+    @field_validator("metric_definitions")
+    @classmethod
+    def unique_metrics(cls, value: list[MetricDefinition]) -> list[MetricDefinition]:
+        if not value or len({m.name for m in value}) != len(value):
+            raise ValueError("metric definitions must be nonempty and unique")
+        return value
 
     @field_validator("adapter")
     @classmethod
@@ -52,6 +66,8 @@ class MlTrainingAdapter:
 
     def load_manifest(self, project_root: Path) -> MlTrainingManifest:
         root = project_root.resolve(strict=True)
+        if (root / MANIFEST_NAME).is_symlink():
+            raise MlTrainingError("manifest symlinks are not permitted")
         try:
             manifest = MlTrainingManifest.model_validate_json(
                 (root / MANIFEST_NAME).read_text(encoding="utf-8")
@@ -122,14 +138,22 @@ class MlTrainingAdapter:
                 f"training exited with code {completed.returncode}: {completed.stderr[-1000:]}"
             )
         try:
-            payload = json.loads(metrics_path.read_text(encoding="utf-8"))
+            if metrics_path.stat().st_size > 65536:
+                raise MlTrainingError("metric output exceeds 65536 bytes")
+            payload = json.loads(
+                metrics_path.read_text(encoding="utf-8"), object_pairs_hook=unique_json
+            )
             observation = MlTrainingObservation.model_validate(payload)
         except (OSError, ValueError) as error:
             raise MlTrainingError(f"training did not produce valid metrics: {error}") from error
-        if set(observation.metrics) != SUPPORTED_METRICS:
-            raise MlTrainingError("training metrics must include accuracy, f1, precision, recall")
-        if any(not 0 <= value <= 1 for value in observation.metrics.values()):
-            raise MlTrainingError("classification metrics must be within [0, 1]")
+        if set(observation.metrics) != {m.name for m in manifest.metric_definitions}:
+            raise MlTrainingError("training metrics must match declared metric definitions")
+        for definition in manifest.metric_definitions:
+            value = observation.metrics[definition.name]
+            if (definition.minimum is not None and value < definition.minimum) or (
+                definition.maximum is not None and value > definition.maximum
+            ):
+                raise MlTrainingError(f"metric outside declared bounds: {definition.name}")
         return observation.model_copy(
             update={
                 "stdout_tail": completed.stdout[-2000:],

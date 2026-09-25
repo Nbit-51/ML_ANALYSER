@@ -1,0 +1,39 @@
+{
+  "adapter": "generic_process",
+  "profile": "cli",
+  "command": [
+    "/usr/bin/python3",
+    "-I",
+    "harness.py"
+  ],
+  "config_file": "config.json",
+  "candidate_overrides": {
+    "repeats": 10
+  },
+  "metric_definitions": [
+    {
+      "name": "work_units",
+      "unit": "operations",
+      "direction": "minimize"
+    },
+    {
+      "name": "checks_passed",
+      "unit": "ratio",
+      "minimum": 0,
+      "maximum": 1
+    },
+    {
+      "name": "elapsed_ms",
+      "unit": "ms",
+      "direction": "minimize"
+    },
+    {
+      "name": "process_duration_ms",
+      "unit": "ms",
+      "direction": "minimize"
+    }
+  ],
+  "warmup_count": 1,
+  "repetitions": 5,
+  "allowed_output_paths": []
+}

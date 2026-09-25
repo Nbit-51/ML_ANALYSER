@@ -19,6 +19,7 @@ from ml_analyser.adapters.backend_http import (
 from ml_analyser.agent.approval import ApprovalService
 from ml_analyser.agent.evaluator import DecisionEvaluator
 from ml_analyser.agent.ids import stable_id
+from ml_analyser.agent.measurements import summarize
 from ml_analyser.agent.models import (
     AnalysisContext,
     ApprovalRecord,
@@ -160,7 +161,8 @@ class BackendBenchmarkPipeline:
                 "Copy the accepted project into separate baseline and candidate workspaces.",
                 "Apply only manifest-declared JSON overrides to the candidate copy.",
                 "Launch each Python backend without a shell and bind it to localhost.",
-                "Measure both copies with identical request counts and timeouts.",
+                "Warm up both copies, then run identical sequential request batches.",
+                "Assess between-batch summary variance; retain successful-request samples.",
                 "Evaluate the objective, response integrity, guardrails, and budget.",
                 "Retain an accepted candidate copy or discard a rejected candidate copy.",
             ],
@@ -288,7 +290,7 @@ class BackendBenchmarkPipeline:
                     candidate,
                     evidence_id=candidate_evidence.id,
                     response_matches=float(
-                        baseline.response_hash is not None
+                        baseline.response_hash not in {None, "inconsistent"}
                         and baseline.response_hash == candidate.response_hash
                     ),
                 ),
@@ -418,6 +420,7 @@ class BackendBenchmarkPipeline:
                 "p95_latency_ms": observation.p95_latency_ms,
                 "error_rate": observation.error_rate,
                 "response_hash": observation.response_hash,
+                "observation_json": observation.model_dump_json(),
             },
         )
 
@@ -433,10 +436,38 @@ class BackendBenchmarkPipeline:
             "mean_latency_ms": observation.mean_latency_ms,
             "p50_latency_ms": observation.p50_latency_ms,
             "p95_latency_ms": observation.p95_latency_ms,
+            "p99_latency_ms": observation.p99_latency_ms,
+            "successful_requests": float(observation.successful_requests),
+            "response_bytes": float(observation.response_bytes),
             "response_hash_matches": response_matches,
             "throughput_requests_per_second": observation.throughput_requests_per_second,
         }
+        units = {
+            "error_rate": "ratio",
+            "response_hash_matches": "ratio",
+            "response_bytes": "bytes",
+            "successful_requests": "requests",
+            "throughput_requests_per_second": "requests/s",
+        }
         return [
-            Measurement(metric=metric, value=value, evidence_ids=[evidence_id])
+            Measurement(
+                metric=metric,
+                value=value,
+                evidence_ids=[evidence_id],
+                unit="ms" if "latency" in metric else units[metric],
+                raw_samples=observation.raw_latency_samples if "latency" in metric else [],
+                reliability_samples=[
+                    getattr(summarize(batch), metric.split("_")[0])
+                    for batch in observation.latency_rounds
+                ]
+                if "latency" in metric
+                else [],
+                summary=summarize(observation.raw_latency_samples)
+                if "latency" in metric and observation.raw_latency_samples
+                else None,
+                warmup_count=observation.warmup_count,
+                failed_sample_count=observation.error_count if "latency" in metric else 0,
+                environment_fingerprint=observation.environment_fingerprint,
+            )
             for metric, value in values.items()
         ]

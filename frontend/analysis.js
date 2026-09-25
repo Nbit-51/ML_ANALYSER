@@ -33,6 +33,28 @@ function renderRepositoryPreview(result) {
     `${metric}: ${describeMetric(metric)} Your selected goal is to ${direction === "minimize" ? "lower" : "raise"} this value. ` +
     "Targets and guardrails are goals; this preview has not tested whether they pass.";
 
+  renderOverview(result.repository_summary, analysisElement("repository-overview"));
+  const adapterControls = analysisNode("div");
+  for (const adapter of result.repository_summary.adapters) {
+    if (adapter.status !== "supported_and_executable") continue;
+    const button = analysisNode("button", `Prepare ${adapter.adapter} experiment`, "primary-button");
+    button.type = "button";
+    button.addEventListener("click", async () => {
+      button.disabled = true;
+      try {
+        prepared = await api("/prepare", "POST", {
+          adapter: adapter.adapter, project_path: analysisElement("analysis-path").value.trim(),
+          success_contract: result.success_contract,
+        });
+        renderPlan();
+        setStatus("active", "Declared plan ready for review");
+        $("plan-review").scrollIntoView({ behavior: "smooth", block: "center" });
+      } catch (error) { showError(error.message); }
+      finally { button.disabled = false; }
+    });
+    adapterControls.append(button);
+  }
+  analysisElement("repository-overview").append(adapterControls);
   const counts = analysisElement("analysis-counts");
   counts.replaceChildren(...Object.entries(result.inventory.category_counts).map(([category, count]) =>
     analysisNode("span", `${category.replaceAll("_", " ")}: ${count}`)
@@ -84,7 +106,8 @@ function renderRepositoryPreview(result) {
     const details = document.createElement("details");
     details.className = "analysis-evidence-item";
     details.append(analysisNode("summary", `${item.kind} · ${item.source}`));
-    details.append(analysisNode("p", item.claim));
+    details.id = `evidence-${item.id}`;
+    details.append(analysisNode("p", item.claim), analysisNode("pre", JSON.stringify(item, null, 2)));
     return details;
   }));
   analysisElement("analysis-warnings").replaceChildren(

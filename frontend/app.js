@@ -1,6 +1,6 @@
 const DEMOS = {
   "ml-training": {
-    project: "ml-training-demo",
+    project: "ml-training-demo", adapter: "ml_training",
     objective: { metric: "f1", direction: "maximize", target: 0.9, minimum_improvement: 0.1 },
     constraints: [
       { metric: "recall", operator: "gte", threshold: 1.0 },
@@ -9,8 +9,14 @@ const DEMOS = {
     budget: { max_wall_clock_seconds: 10, max_experiments: 1 },
     heading: "Validation F1",
   },
+  "generic-process": {
+    project: "cli-benchmark-demo", adapter: "generic_process",
+    objective: { metric: "work_units", direction: "minimize", target: 20, minimum_improvement: 50 },
+    constraints: [{ metric: "checks_passed", operator: "eq", threshold: 1 }],
+    budget: { max_wall_clock_seconds: 30, max_experiments: 1 }, heading: "Measured work units",
+  },
   "backend-benchmark": {
-    project: "backend-benchmark-demo",
+    project: "backend-benchmark-demo", adapter: "backend_http",
     objective: { metric: "p95_latency_ms", direction: "minimize", target: 40, minimum_improvement: 10 },
     constraints: [
       { metric: "error_rate", operator: "lte", threshold: 0 },
@@ -103,6 +109,11 @@ function renderPlan() {
   $("risk-pill").textContent = `${prepared.approval.risk_level.toUpperCase()} RISK`;
   $("run-id").textContent = plan.run_id.slice(0, 8);
   $("changes").replaceChildren(...plan.experiment.change_summary.map((change) => element("li", change)));
+  $("plan-json").textContent = JSON.stringify(plan, null, 2);
+  const readiness = prepared.repository_summary?.adapters.find(a => a.adapter === prepared.adapter);
+  $("approve-button").disabled = readiness?.status !== "supported_and_executable";
+  $("execution-readiness").textContent = readiness ? `${readiness.status.replaceAll("_", " ").toUpperCase()} · ${readiness.reason}` : "Review execution requirements";
+  if (prepared.repository_summary) renderOverview(prepared.repository_summary, $("result-overview"));
   renderTimeline(["ingesting", "diagnosing", "hypothesizing", "designing", "selecting", "awaiting_approval"]);
 }
 
@@ -123,7 +134,8 @@ async function prepare() {
   setStatus("active", "Inspecting project");
   const demo = DEMOS[selected];
   try {
-    prepared = await api(`/${selected}/prepare`, "POST", {
+    prepared = await api(`/prepare`, "POST", {
+      adapter: demo.adapter,
       project_path: demo.project,
       project_id: demo.project,
       success_contract: {
@@ -145,7 +157,7 @@ async function approveAndStart() {
   try {
     const approvalId = prepared.approval.id;
     await api(`/approvals/${approvalId}`, "POST", { approved: true, reason: "Approved in demo workbench" });
-    const started = await api(`/${selected}/start`, "POST", { approval_id: approvalId, plan: prepared.plan });
+    const started = await api(`/start`, "POST", { adapter: prepared.adapter, approval_id: approvalId, plan: prepared.plan });
     $("plan-review").classList.add("hidden");
     setStatus("active", "Run queued");
     sessionStorage.setItem("ml-analyser-live-run", started.run_id);
@@ -172,30 +184,23 @@ function renderResult(result) {
   $("decision-pill").className = `decision-pill ${decision}`;
   $("decision-pill").textContent = decision.toUpperCase();
   $("decision-reason").textContent = result.decision.reason;
-  const metrics = $("metrics");
-  metrics.replaceChildren();
-  const metricNames = selected === "ml-training"
-    ? ["f1", "accuracy", "precision", "recall"]
-    : ["p95_latency_ms", "p50_latency_ms", "error_rate", "throughput_requests_per_second"];
-  for (const name of metricNames) {
-    const card = element("div", "", "metric");
-    const baselineValue = metricValue(result, name, "baseline");
-    const candidateValue = metricValue(result, name, "candidate");
-    card.append(element("span", name.replaceAll("_", " "), "metric-label"));
-    card.append(element("strong", formatMetric(candidateValue, name), "improved"));
-    card.append(element("small", `Baseline ${formatMetric(baselineValue, name)}`));
-    card.append(element("small", describeMetric(name), "metric-meaning"));
-    card.append(element("small", interpretMetricChange(baselineValue, candidateValue, name), "metric-meaning"));
-    metrics.append(card);
-  }
-  $("evidence").replaceChildren(...result.evidence.map((item) => {
-    const node = element("div", "", "evidence-item");
-    node.append(element("strong", item.kind.toUpperCase()), element("span", item.claim), element("span", item.id));
-    return node;
+  renderMetrics(result);
+  renderGuardrails(result);
+  renderReliability(result);
+  renderLineage(result);
+  renderOverview(result.repository_summary, $("result-overview"));
+  $("final-report").textContent = JSON.stringify(result.report, null, 2);
+  $("artifacts").replaceChildren(...(result.artifacts || []).map(artifact => {
+    const details = element("details");
+    details.append(element("summary", `${artifact.path} · ${artifact.size_bytes} bytes`),
+      element("pre", JSON.stringify(artifact, null, 2)));
+    return details;
   }));
-  $("lineage").replaceChildren(...result.experiments.map((item) => {
-    const node = element("div", "", "lineage-item");
-    node.append(element("strong", item.title), element("span", `${item.status} · ${item.id}`));
+  $("evidence").replaceChildren(...result.evidence.map(item => {
+    const node = element("details", "", "evidence-item");
+    node.id = `evidence-${item.id}`;
+    node.append(element("summary", `${item.kind.toUpperCase()} · ${item.claim}`),
+      element("pre", JSON.stringify(item, null, 2)));
     return node;
   }));
   $("disposition").textContent = result.disposition === "retained"
@@ -207,8 +212,8 @@ async function pollRun(runId) {
   if (pollTimer) clearTimeout(pollTimer);
   try {
     const snapshot = await api(`/live/${runId}`);
-    selected = snapshot.adapter === "ml_training" ? "ml-training" : "backend-benchmark";
-    renderContract();
+    const matching = Object.entries(DEMOS).find(([, demo]) => demo.adapter === snapshot.adapter);
+    if (matching) { selected = matching[0]; renderContract(); }
     $("run-id").textContent = runId.slice(0, 8);
     renderTimeline(snapshot.events);
     if (snapshot.status === "completed") {

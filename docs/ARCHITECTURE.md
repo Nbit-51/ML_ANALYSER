@@ -1,291 +1,74 @@
 # Architecture
 
-## Overview
+## Implemented system
 
-ML Analyser is designed as a closed-loop, evidence-driven optimization system. It accepts a technical project and a machine-readable success contract, forms falsifiable hypotheses, runs controlled experiments, and keeps a change only when measured evidence satisfies both the objective and every guardrail.
-
-The architecture separates HTTP transport, domain-neutral orchestration, project understanding, domain adapters, inference providers, guarded execution, evaluation, persistence, and presentation. ML is the flagship adapter; the core vocabulary is goal, metric, constraint, hypothesis, experiment, observation, and decision.
-
-Three bounded vertical slices are implemented. The ML threshold path measures saved predictions. The ML training and backend benchmark paths perform persisted fingerprint-bound approval, isolated baseline/candidate execution, deterministic evaluation, and candidate retain/discard. A browser workbench exposes plan review and persisted run events. A Token Factory provider is implemented behind configuration and contract-tested without credentials. Live Nemotron validation, arbitrary command execution, production-grade scheduling, and promotion of retained candidates remain unverified or planned.
-
-## System context
+ML Analyser is a local evidence-driven repository experimentation engine with ML as its flagship use case. FastAPI exposes typed contracts and controlled experiments; SQLite stores approvals, append-only evidence, run events and experiment lineage; the browser uses lightweight JavaScript and SVG. Existing classification, threshold and HTTP demonstrations remain available.
 
 ```text
-User + success contract
-          |
-          v
-Browser workbench -> FastAPI service
-                              |
-                              v
-                 Closed-loop orchestrator
-                    |         |         |
-                    v         v         v
-              Project     Hypothesis  Experiment DAG /
-              state graph + compiler  evidence ledger
-                    |         |         |
-                    v         v         v
-              Domain adapter and measurement contract
-                    |                   ^
-                    v                   |
-            Guarded experiment runner -> evaluator/decision policy
-                    |
-              isolated workspace / compute
-
-Nemotron through Nebius -> structured reasoning requests to the orchestrator
+Repository -> read-only inventory -> capability facts and project graph
+           -> bounded evidence selection -> mock / Nemotron hypotheses
+Success contract + declared adapter profile -> preparation -> exact approval
+           -> copied baseline/candidate -> adapter measurement protocol
+           -> normalized observations -> deterministic evaluator
+           -> immutable evidence + experiment DAG -> report + visual workbench
 ```
 
-## Product boundary
+## Domain and measurements
 
-The product is not a universal coding agent. Coding agents primarily produce code changes; this system optimizes a measurable outcome and verifies whether a provisional change helped.
+`agent/models.py` defines objectives, constraints, multidimensional budgets, strict manifests, hypotheses, experiments, approvals, measurements and decisions. Unknown fields and nonfinite numeric values are rejected. Measurement retains a scalar for contract evaluation plus raw samples, optional batch-level reliability samples, descriptive statistics, warm-ups, failures, timestamps, environment fingerprint and evidence IDs.
 
-Domain adapters prevent “works on everything” from becoming an unsupported claim:
+`agent/measurements.py` computes mean, median, min/max, interpolated percentiles, sample standard deviation and coefficient of variation. `agent/evaluator.py` decides accepted/rejected/inconclusive without model discretion. Missing required metrics, incompatible units/environments, fewer than three repeated samples, failures or CV above 0.30 undermine required comparisons. Scalar-only ML results explicitly remain reliability-not-assessed. Custom metric direction comes from the contract or explicit metadata.
 
-| Adapter | Hackathon scope | Measurements |
-| --- | --- | --- |
-| ML | Fully functional flagship | F1/AP/loss, latency, VRAM, model size, training evidence |
-| Backend HTTP benchmark | Functional proof | P50/P95/mean latency, throughput, errors, response integrity |
-| AI-agent evaluation | Prototype/stretch | Task success, evaluator score, latency, token cost |
+## Adapter registry
 
-An adapter defines discovery rules, allowed interventions, measurement tools, comparison semantics, and compatibility checks. The core engine remains unaware of whether a metric is F1 or P95 latency.
+`adapters/registry.py` binds adapter identity, manifest name, profile types, requirements, plan schema, validator, pipeline factory and observation normalizer. The API and background dispatcher use registration lookup, not growing adapter-name conditionals. Legacy pipelines retain domain-specific execution details and endpoints for compatibility.
 
-## Component boundaries
+- `ml_training`: runs a declared Python script with a JSON config and structured metrics file. Default classification definitions preserve old manifests; explicit definitions support custom regression/inference metrics and known bounds.
+- `backend_http`: starts a trusted local Python server, performs warm-ups and repeated sequential request batches, retains successful-request latency samples, separates errors, computes P50/P95/P99 and compares response content. Reliability uses per-batch summaries rather than pretending requests are independent experiment repetitions.
+- `generic_process`: runs an explicit CLI/test/build/microbenchmark harness manifest under Linux bubblewrap. It alternates baseline/candidate ordering, persists every round (including warm-ups and failures), compares correctness signatures and evaluates means. Optional `process_duration_ms` is tool-measured across build/test/benchmark commands; other declared metrics originate in the harness.
 
-### API layer
+Registration does not imply every ecosystem is executable. Missing manifests require configuration; missing sandbox support means preview only. An installed runtime plus compatible declared harness is required. The general runner never installs dependencies or executes a command inferred from a README.
 
-Responsibilities:
+## Repository understanding
 
-- validate external requests and success contracts;
-- create and query optimization runs;
-- expose progress, hypotheses, evidence, experiment lineage, budgets, and reports;
-- map domain errors to stable HTTP responses.
+`tools/repository.py` inventories bounded file metadata without importing code. Composition uses bytes of inventoried source files, not file counts presented as LOC. `tools/capabilities.py` returns conservative filename/category evidence for languages, package/build systems, test suites, benchmark files, CI, containers, likely entrypoints, ML/web indicators, data, models, results and configuration.
 
-The API layer contains no decision logic and issues no arbitrary shell commands. It exposes health, read-only preview, the saved-prediction demo, ML training and backend prepare/approve/execute flows, and background run-status reads.
+Capability provenance distinguishes detected facts, declared profile configuration, inferred relationships and measured outputs. Static indicators do not establish runtime compatibility. Project graphs preserve file/category structure and add languages and capability relationships with evidence and confidence. Completed experiment graphs connect repository, experiments, dependencies and measurements. No arbitrary semantic call graph is claimed.
 
-### Application services
+The context collector deterministically ranks requested objective/guardrail tokens, benchmark/config/test/entrypoint names, README lines and result filenames. It selects bounded excerpts (six source/config/test excerpts, two prior result records, one README; 1,600 characters per excerpt). Secret-like filenames, environment files and lockfiles are excluded. Responses expose model-context flags and exact excerpts; prior records are not new measurements. Nebius structured output and the preview orchestrator reject nonexistent evidence IDs. Source grounding is evidence validation, not proof every proposed explanation is correct.
 
-Responsibilities:
+## Approval, isolation and sandbox
 
-- coordinate repository intake and run lifecycle operations;
-- enforce legal run-state transitions;
-- invoke the agent runtime, adapter, and persistence ports;
-- provide approvals and status updates; cancellation remains planned.
+`ApprovalService` persists a canonical plan fingerprint. SQLite uses conditional updates for single-use authorization. Changing a contract, manifest, hypothesis, command or source fingerprint invalidates scope. Generic execution also verifies copied inventories before running code.
 
-### Success contract
+`IsolatedWorkspaceManager` rejects symlink-containing sources, creates separate baseline/candidate copies, and constrains cleanup to the execution root. Accepted candidates remain isolated; other candidates are discarded. Promotion to the source repository is not implemented.
 
-Each run begins with a validated contract containing:
+The generic sandbox uses a fresh network/user/PID namespace, read-only runtime directories and `/work`, exact writable artifact files, an explicit environment allowlist, bounded stdout/stderr and timeouts. Trusted resource-limit setup occurs inside the namespace before executing the declared argv. It denies host-home access, external network and undeclared writes. Memory/CPU/process/file limits are per process; aggregate cgroup enforcement is future work. See [the benchmark guide](GENERIC_BENCHMARKS.md) for the executable surface and limitations.
 
-- primary objective metric, direction, and optional target;
-- hard constraints and permitted regression tolerances;
-- budget dimensions such as money, GPU/CPU minutes, tokens, experiment count, and wall-clock time;
-- adapter identity and measurement configuration.
+Legacy ML/HTTP runners remain trusted local demonstrations. Workspace copies are not an OS security boundary for hostile scripts; these adapters are labeled accordingly. No safety claim about the generic sandbox is retroactively applied to them.
 
-Missing measurements cannot pass a constraint. Estimates and observations must remain separate fields.
+## Persistence, API and reports
 
-### Agent runtime
+SQLite tables store append-only evidence and experiment DAG nodes, exact approvals, live-run snapshots and stage events. New normalized results are serialized into an immutable evidence record and read back for delivery. Reports contain repository identity, contract, hypothesis, exact change, source fingerprint, declared command/configuration, measurement methodology, comparisons, reliability, guardrails, resource usage, evidence IDs, disposition and limitations. No report depends on model memory.
 
-The orchestrator will be a state machine, not a free-form chat loop:
+| Endpoint | Role |
+| --- | --- |
+| `POST /api/v1/runs/preview` | Read-only repository evidence and hypotheses |
+| `POST /api/v1/runs/prepare` | Registered adapter plan and pending approval |
+| `POST /api/v1/runs/approvals/{id}` | Approve/reject exact scope |
+| `POST /api/v1/runs/execute` | Synchronous normalized measured result |
+| `POST /api/v1/runs/start` | Queue local background execution |
+| `GET /api/v1/runs/live/{id}` | Persisted progress/result |
+| `GET /api/v1/runs/{id}/report` | Immutable normalized report |
 
-```text
-CREATED -> INGESTING -> DIAGNOSING -> HYPOTHESIZING -> DESIGNING
-        -> SELECTING -> AWAITING_APPROVAL -> EXECUTING -> MEASURING
-        -> DECIDING -> REVISING or REPORTING -> COMPLETED
+Legacy `/ml-training/*`, `/backend-benchmark/*` and `/ml-threshold-demo` endpoints remain available with their original response shapes. Generic endpoints return typed union plans and common result schemas. Background execution uses local FastAPI tasks, not a durable distributed worker; restart recovery and cancellation remain future work.
 
-Any active state -> FAILED or CANCELLED
-```
+## Frontend
 
-Some runs may skip execution when no safe or affordable experiment is available. That transition must be explicit and represented in the report.
+`analytics.js` contains pure, adapter-neutral transformations tested under Node. `workbench.js` renders SVG metric comparisons, shared-bin sample histograms, a rule-by-rule guardrail table, reliability diagnostics, byte composition, a selectable experiment DAG and evidence disclosures. Units and directions come from backend data. Unknown units and custom metrics remain renderable. The frontend contains no adapter-specific list of result metrics.
 
-Core responsibilities:
+## Validation and scope
 
-- build structured context from repository artifacts and previous runs;
-- request typed diagnoses and falsifiable hypotheses;
-- compile selected hypotheses into minimal reproducible experiments;
-- rank candidates under information gain, expected improvement, risk, and remaining budget;
-- validate proposed actions against policy;
-- schedule approved actions through the guarded runner;
-- convert outputs into evidence records;
-- compare observations with a compatible baseline, objective, and every guardrail;
-- keep or revert the provisional change and select the next experiment;
-- generate a report from durable state.
+CI enforces Ruff lint/format, strict mypy, backend coverage >=90%, JavaScript syntax checks and frontend transformation tests. Linux integration tests execute actual CLI, test, build and microbenchmark profiles and validate network/write denial, timeout and output bounds. Other tests cover custom ML metrics, HTTP results, approval replay/tampering, source changes, malformed/duplicate/nonfinite output, reliability and source isolation.
 
-### Model provider port
-
-The runtime depends on a small typed interface. Implementations now include:
-
-- a deterministic local/mock provider for tests and offline development;
-- an OpenAI-compatible Nebius Token Factory adapter intended for an NVIDIA Nemotron model selected at deployment time.
-
-For an expensive action, Nemotron may provide structured diagnostic, skeptic, experiment-planner, and judge perspectives. These are workflow responsibilities, not necessarily separately deployed agents. Deterministic application code retains final authority over schemas, budgets, policy, and pass/fail decisions.
-
-The Token Factory adapter owns authentication, HTTPS endpoint details, timeout handling, JSON-schema requests, response validation, and evidence/metric grounding. Retry policy and usage persistence remain planned. Provider failures surface explicitly and never substitute fabricated output.
-
-### Project state graph (planned)
-
-The repository must not be flattened into one model prompt. A versioned state graph connects:
-
-- source files, entry points, dependencies, and code revisions;
-- datasets, schemas, splits, fingerprints, and preprocessing;
-- configurations and hyperparameters;
-- models, checkpoints, and runtime environments;
-- metrics, logs, benchmarks, tests, and artifacts;
-- hypotheses, observations, and experiment lineage.
-
-Graph entities retain source references and freshness metadata. A project-state change determines whether an earlier experimental conclusion is still applicable.
-
-### Hypothesis engine and experiment compiler (planned)
-
-A hypothesis is a typed, falsifiable claim recording the suspected cause, supporting evidence, uncertainty, proposed intervention, target metric effect, protected guardrails, success threshold, and rejection rule.
-
-The experiment compiler translates an approved hypothesis into a reproducibility bundle:
-
-- parent/baseline experiment;
-- isolated code patch or configuration delta;
-- exact command and working directory;
-- dataset/project snapshot and environment identity;
-- expected measurements and comparison method;
-- estimated duration, resource demand, and cost;
-- artifact-capture and safe-revert instructions.
-
-Compilation does not imply execution. Policy validation must approve the bundle before it reaches the runner.
-
-### Experiment selector (planned)
-
-The selector ranks valid candidate experiments using interpretable factors:
-
-- expected information gain: how much the result distinguishes competing diagnoses;
-- expected objective improvement and probability of success;
-- execution and rollback risk;
-- estimated cost across every budget dimension;
-- remaining budget and dependency ordering.
-
-A cheap diagnostic can outrank a more promising but expensive change when it eliminates more uncertainty per unit cost. Initial heuristics should remain auditable; more complex optimization is unnecessary until evaluation data justifies it.
-
-### Tool registry and guarded runner
-
-Tools have typed input/output schemas and declared capabilities. Early tools may include repository inventory, targeted search, dependency/config inspection, tests, linters, log and metric parsers, benchmarks, and narrowly scoped training/evaluation commands.
-
-The backend and training adapters implement narrow runners: they copy the project, reject symlinks, launch only the current Python interpreter with isolation mode and no shell, enforce timeouts, allowlist environment variables, and bound output. The backend runner binds to localhost; the training runner reads a declared metric JSON file. This is not an OS/container sandbox. A candidate is provisional: accepted candidates remain isolated for later promotion, while rejected candidates are discarded and the source remains untouched.
-
-### Evaluator and decision policy
-
-The evaluator checks measurement compatibility before comparison. A decision can be:
-
-- **accepted:** the configured objective rule passes and every hard guardrail passes;
-- **rejected:** the objective or a guardrail fails with valid measurements;
-- **inconclusive:** required evidence is missing, invalid, or incomparable.
-
-Passing tests is a guardrail, not proof that the objective improved. Decision records include before/after values, deltas, tolerances, constraint status, and links to raw evidence.
-
-### Evidence ledger and experiment DAG
-
-Every material conclusion references evidence. Experiments form a directed acyclic graph, not a linear chat transcript:
-
-```text
-Run
-|-- state transitions
-|-- success contract and budget ledger
-|-- project state graph version
-|-- findings[] -> evidence_refs[]
-|-- hypotheses[]
-|-- experiment DAG
-|   `-- experiment node
-|       |-- parent experiment and hypothesis
-|       |-- code revision, patch, and configuration
-|       |-- dataset/project version and environment/hardware
-|       |-- command, policy decision, timestamps, and exit status
-|       |-- estimated and actual time/cost/resources
-|       |-- metrics, logs, and artifact references
-|       `-- baseline comparison, guardrails, and decision
-`-- report
-```
-
-Large outputs and binary artifacts live in artifact storage; persistence records contain hashes, metadata, and stable references. Rejected hypotheses remain searchable and are reconsidered only if relevant project state changes.
-
-### Frontend
-
-The current workbench presents two fixture workflows:
-
-- define or load a success contract;
-- observe the diagnose-to-decision stage and remaining budget;
-- review hypotheses and approve guarded execution where required;
-- compare baseline and candidate measurements with every constraint;
-- inspect experiment lineage, rejected ideas, and why each change was kept or reverted;
-- read the final evidence-backed report.
-
-It polls persisted run snapshots and displays stage progression, metrics, evidence, and lineage. It does not stream events or offer arbitrary repository uploads. Visual complexity that does not reinforce trust, evidence, or progress is avoided.
-
-## End-to-end request flow
-
-1. The API creates a run from a validated workspace and success contract.
-2. The adapter inventories project artifacts and establishes a compatible baseline.
-3. Analysis tools and previous runs populate the project state graph.
-4. The provider produces structured diagnoses and falsifiable hypotheses.
-5. The compiler creates candidate reproducibility bundles.
-6. The selector ranks candidates by information/value, risk, and remaining budget.
-7. Policy rejects unsafe or malformed operations and requests approval where required.
-8. The runner applies the candidate in isolation, executes it, and persists raw outputs.
-9. The adapter normalizes measurements; the evaluator checks the objective and guardrails.
-10. The decision stage accepts, rejects, or marks the hypothesis inconclusive, then keeps or reverts the candidate.
-11. The evidence ledger, project state graph, experiment DAG, and budget ledger are updated.
-12. The result drives the next experiment or ends the loop and produces the report.
-
-## Safety model
-
-Repositories, their scripts, generated patches, and model output are untrusted. Before arbitrary execution is enabled, the system should:
-
-- canonicalize and constrain paths to the assigned workspace;
-- begin with read-only analysis;
-- isolate every candidate change from accepted project state;
-- allowlist executable tools and validate typed arguments;
-- deny implicit network access unless a tool explicitly requires and receives it;
-- prevent secrets from entering model context, logs, or reports;
-- set wall-clock, CPU, GPU, memory, disk, spend, and output limits;
-- record the command, directory, environment allowlist, and exit code;
-- require approval for destructive, expensive, or externally visible operations;
-- treat generated artifacts as untrusted until inspected;
-- make rejection/revert idempotent and preserve its evidence.
-
-## API conventions
-
-- Product APIs are versioned below `/api/v1`.
-- Health endpoints stay dependency-light.
-- Request and response bodies use Pydantic models.
-- Domain behavior belongs outside route functions.
-- Errors will use stable machine-readable codes once domain endpoints are added.
-
-Current endpoints:
-
-| Method | Path | Purpose |
-| --- | --- | --- |
-| `GET` | `/` | Service identity and documentation link. |
-| `GET` | `/api/v1/health` | Process health and version. |
-| `POST` | `/api/v1/runs/preview` | Read-only inventory, graph, hypotheses, and dry-run experiments. |
-| `POST` | `/api/v1/runs/ml-threshold-demo` | Approved bounded ML measurement path. |
-| `POST` | `/api/v1/runs/backend-benchmark/prepare` | Persist an exact backend plan and pending approval. |
-| `POST` | `/api/v1/runs/approvals/{approval_id}` | Approve or reject one fingerprinted scope. |
-| `POST` | `/api/v1/runs/backend-benchmark/execute` | Consume approval and benchmark isolated baseline/candidate copies. |
-| `POST` | `/api/v1/runs/ml-training/prepare` | Persist a scoped ML training plan and pending approval. |
-| `POST` | `/api/v1/runs/ml-training/execute` | Consume approval and measure baseline/candidate training. |
-| `POST` | `/api/v1/runs/ml-training/start` | Start approved training in a local background task. |
-| `POST` | `/api/v1/runs/backend-benchmark/start` | Start approved benchmark in a local background task. |
-| `GET` | `/api/v1/runs/live/{run_id}` | Read persisted status, events, and final result. |
-| `GET` | `/app` | Browser workbench. |
-
-## Observability (planned)
-
-Use structured logs with run, stage, experiment, tool-call, adapter, and provider-request identifiers. Capture latency, token usage when available, tool duration, resource/cost estimates and observations, failure categories, decisions, and state transitions. Secret values and sensitive repository content must be redacted.
-
-## Testing strategy
-
-- **Unit tests:** contracts, state transitions, policies, selectors, parsers, comparisons, budgets, and adapters.
-- **Contract tests:** model-provider, domain-adapter, and tool schemas.
-- **API tests:** validation, lifecycle behavior, and error mapping.
-- **Integration tests:** deterministic mock-provider runs over small fixture repositories.
-- **Decision tests:** known baselines/candidates covering accept, reject, inconclusive, and revert behavior.
-- **End-to-end tests:** deployed ML demo plus a smaller software benchmark path.
-
-The current suite includes unit, provider-contract, API, persistence, safety, decision, and end-to-end tests. CI enforces formatting, linting, strict type checking, and at least 90% statement coverage.
-
-## Deployment direction
-
-Packaging and deployment will be selected after the first vertical slice. A production deployment should separate the web/API process from resource-intensive experiment execution, use managed secrets, persist run state outside process memory, and support cancellation and recovery. Nebius infrastructure is the intended hackathon deployment target.
+This remains a local hackathon prototype. Native C/C++/Node/Go/Rust/Java-specific benchmark integrations, agent evaluation, frontend browser benchmarks, HTTP concurrency, statistical testing, aggregate accounting, production workers and automatic source promotion are not implemented.

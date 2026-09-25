@@ -38,3 +38,36 @@
 .analysis-warnings p{margin:5px 0}
 @media(max-width:700px){.analysis-columns{grid-template-columns:1fr}}
 @media(max-width:580px){.analysis-form{grid-template-columns:1fr}.analysis-form .field-wide,.analysis-submit{grid-column:1}}
+/* Evidence workbench: shared comparison colors never imply acceptance. */
+.baseline-bar { fill: #637fbd; }
+.candidate-bar { fill: #24b7a0; }
+.metric svg { display: block; width: 100%; }
+.metric details { margin-top: 12px; font-size: 12px; }
+details a { display: block; overflow-wrap: anywhere; }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 420px; overflow: auto; font-size: 12px; padding: 12px; background: #f3f6fa; border-radius: 8px; }
+.guardrail-table { border-collapse: collapse; width: 100%; margin: 18px 0; font-size: 13px; }
+.guardrail-table th, .guardrail-table td { text-align: left; padding: 12px; border-bottom: 1px solid #dce5ef; }
+.table-scroll { overflow-x: auto; }
+.pass { color: #087d61; font-weight: 700; }
+.fail { color: #b4303d; font-weight: 700; }
+.inconclusive { color: #936811; font-weight: 700; }
+.dag-node { fill: #edf2fa; stroke: #8094b3; }
+.dag-node.accepted { fill: #dcf4ea; stroke: #16816a; }
+.dag-node.rejected { fill: #ffe9e9; stroke: #b4303d; }
+.dag-node.inconclusive { fill: #fff4ce; stroke: #936811; }
+#lineage svg { width: 100%; min-height: 125px; }
+#lineage text { font-size: 12px; fill: #273b56; }
+#lineage g { cursor: pointer; }
+#lineage g:focus rect { stroke-width: 3; }
+.composition-row { position: relative; padding: 8px; margin: 6px 0; background: #f1f5fb; border-radius: 6px; overflow: hidden; }
+.composition-row > span:first-child { position: relative; z-index: 1; font-size: 12px; }
+.composition-bar { position: absolute; inset: 0; background: #d2e1f6; }
+.readiness { padding: 10px 12px; background: #f2f5fa; border-left: 3px solid #637fbd; font-size: 12px; }
+#result-overview, #reliability { margin: 24px 0; }
+.chart-legend { color: #566781; font-size: 12px; }
+.metric small { display: block; margin-top: 6px; }
+.metric { min-width: 0; }
+@media (max-width: 480px) {
+  .metric-grid, .workspace-grid, .result-columns { grid-template-columns: 1fr !important; }
+  main { padding-left: 12px; padding-right: 12px; }
+}

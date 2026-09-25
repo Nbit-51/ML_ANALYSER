@@ -1,0 +1,294 @@
+{
+  "$defs": {
+    "MetricDefinition": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Label"
+        },
+        "unit": {
+          "anyOf": [
+            {
+              "maxLength": 40,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Unit"
+        },
+        "direction": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MetricDirection"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "minimum": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Minimum"
+        },
+        "maximum": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Maximum"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "MetricDefinition",
+      "type": "object"
+    },
+    "MetricDirection": {
+      "enum": [
+        "maximize",
+        "minimize"
+      ],
+      "title": "MetricDirection",
+      "type": "string"
+    },
+    "ResourceLimits": {
+      "additionalProperties": false,
+      "properties": {
+        "timeout_seconds": {
+          "default": 10,
+          "maximum": 120,
+          "minimum": 1,
+          "title": "Timeout Seconds",
+          "type": "integer"
+        },
+        "memory_mb": {
+          "default": 512,
+          "maximum": 2048,
+          "minimum": 64,
+          "title": "Memory Mb",
+          "type": "integer"
+        },
+        "cpu_seconds": {
+          "default": 10,
+          "maximum": 120,
+          "minimum": 1,
+          "title": "Cpu Seconds",
+          "type": "integer"
+        },
+        "output_bytes": {
+          "default": 65536,
+          "maximum": 1048576,
+          "minimum": 1024,
+          "title": "Output Bytes",
+          "type": "integer"
+        },
+        "processes": {
+          "default": 16,
+          "maximum": 64,
+          "minimum": 1,
+          "title": "Processes",
+          "type": "integer"
+        }
+      },
+      "title": "ResourceLimits",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "adapter": {
+      "const": "generic_process",
+      "default": "generic_process",
+      "title": "Adapter",
+      "type": "string"
+    },
+    "profile": {
+      "enum": [
+        "cli",
+        "test_suite",
+        "build",
+        "microbenchmark"
+      ],
+      "title": "Profile",
+      "type": "string"
+    },
+    "working_directory": {
+      "default": ".",
+      "title": "Working Directory",
+      "type": "string"
+    },
+    "command": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 64,
+      "minItems": 1,
+      "title": "Command",
+      "type": "array"
+    },
+    "build_command": {
+      "anyOf": [
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Build Command"
+    },
+    "test_command": {
+      "anyOf": [
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Test Command"
+    },
+    "config_file": {
+      "title": "Config File",
+      "type": "string"
+    },
+    "candidate_overrides": {
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "integer"
+          },
+          {
+            "type": "number"
+          },
+          {
+            "type": "boolean"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "title": "Candidate Overrides",
+      "type": "object"
+    },
+    "metric_definitions": {
+      "items": {
+        "$ref": "#/$defs/MetricDefinition"
+      },
+      "maxItems": 64,
+      "minItems": 1,
+      "title": "Metric Definitions",
+      "type": "array"
+    },
+    "metrics_file": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Metrics File"
+    },
+    "warmup_count": {
+      "default": 1,
+      "maximum": 10,
+      "minimum": 0,
+      "title": "Warmup Count",
+      "type": "integer"
+    },
+    "repetitions": {
+      "default": 5,
+      "maximum": 50,
+      "minimum": 1,
+      "title": "Repetitions",
+      "type": "integer"
+    },
+    "environment": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Environment",
+      "type": "object"
+    },
+    "allowed_output_paths": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 16,
+      "title": "Allowed Output Paths",
+      "type": "array"
+    },
+    "network": {
+      "const": "denied",
+      "default": "denied",
+      "title": "Network",
+      "type": "string"
+    },
+    "limits": {
+      "$ref": "#/$defs/ResourceLimits"
+    },
+    "correctness_required": {
+      "const": true,
+      "default": true,
+      "title": "Correctness Required",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "profile",
+    "command",
+    "config_file",
+    "candidate_overrides",
+    "metric_definitions"
+  ],
+  "title": "ProcessManifest",
+  "type": "object"
+}

@@ -26,6 +26,9 @@ jobs:
       - name: Install project
         run: python -m pip install -e ".[dev]"
 
+      - name: Install local benchmark sandbox
+        run: sudo apt-get update -qq && sudo apt-get install -y bubblewrap
+
       - name: Lint
         run: python -m ruff check .
 
@@ -56,6 +59,8 @@ jobs:
           node --check frontend/app.js
           node --check frontend/analysis.js
           node --check frontend/metrics.js
+          node --check frontend/analytics.js
+          node --check frontend/workbench.js
 
       - name: Test score explanations
-        run: node --test frontend/metrics.test.js
+        run: node --test frontend/metrics.test.js frontend/analytics.test.js

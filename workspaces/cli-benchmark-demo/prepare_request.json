@@ -1,0 +1,23 @@
+{
+  "adapter": "generic_process",
+  "project_path": "cli-benchmark-demo",
+  "success_contract": {
+    "objective": {
+      "metric": "work_units",
+      "direction": "minimize",
+      "target": 20,
+      "minimum_improvement": 50
+    },
+    "constraints": [
+      {
+        "metric": "checks_passed",
+        "operator": "eq",
+        "threshold": 1
+      }
+    ],
+    "budget": {
+      "max_wall_clock_seconds": 30,
+      "max_experiments": 1
+    }
+  }
+}

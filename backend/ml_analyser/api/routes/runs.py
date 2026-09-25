@@ -110,37 +110,20 @@ def _run_background(
         def callback(state: RunState) -> None:
             store.record_run_state(plan.run_id, state.value)
 
-        if adapter == "backend_http" and isinstance(plan, BackendBenchmarkPlan):
-            backend_result = BackendBenchmarkPipeline(
-                provider=DeterministicMockProvider(),
-                inspector=RepositoryInventoryTool(),
-                approvals=ApprovalService(store),
-                evaluator=DecisionEvaluator(),
-                workspaces=IsolatedWorkspaceManager(settings.execution_root),
-                store=store,
-            ).execute(
-                plan=plan,
-                approval_id=approval_id,
-                project_root=project_root,
-                on_state=callback,
-            )
-        elif adapter == "ml_training" and isinstance(plan, MlTrainingPlan):
-            ml_result = MlTrainingPipeline(
-                provider=DeterministicMockProvider(),
-                inspector=RepositoryInventoryTool(),
-                approvals=ApprovalService(store),
-                evaluator=DecisionEvaluator(),
-                workspaces=IsolatedWorkspaceManager(settings.execution_root),
-                store=store,
-            ).execute(
-                plan=plan,
-                approval_id=approval_id,
-                project_root=project_root,
-                on_state=callback,
-            )
-        else:
-            raise ValueError("unsupported run adapter")
-        result = backend_result if adapter == "backend_http" else ml_result
+        from ml_analyser.adapters.registry import default_registry
+
+        registration = default_registry().get(adapter)
+        validated = registration.plan_model.model_validate(plan.model_dump())
+        result = registration.pipeline(
+            provider=DeterministicMockProvider(),
+            inspector=RepositoryInventoryTool(),
+            approvals=ApprovalService(store),
+            evaluator=DecisionEvaluator(),
+            workspaces=IsolatedWorkspaceManager(settings.execution_root),
+            store=store,
+        ).execute(
+            plan=validated, approval_id=approval_id, project_root=project_root, on_state=callback
+        )
         store.finish_live_run(plan.run_id, result.model_dump(mode="json"))
     except Exception as error:
         store.fail_live_run(plan.run_id, f"{type(error).__name__}: {error}")

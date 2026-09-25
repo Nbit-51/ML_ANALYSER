@@ -1,8 +1,3 @@
-# Environment and secrets
-.env
-.env.*
-!.env.example
-
 # Python
 __pycache__/
 *.py[cod]
@@ -35,9 +30,32 @@ workspaces/*
 !workspaces/backend-benchmark-demo/**
 !workspaces/ml-training-demo/
 !workspaces/ml-training-demo/**
+!workspaces/ml-regression-demo/
+!workspaces/ml-regression-demo/**
+!workspaces/cli-benchmark-demo/
+!workspaces/cli-benchmark-demo/**
+!workspaces/build-test-demo/
+!workspaces/build-test-demo/**
 *.log
 
 # Optional frontend build outputs
 node_modules/
 .next/
 out/
+
+# Keep local-only data ignored even inside explicitly included fixtures.
+__pycache__/
+*.py[cod]
+.coverage.*
+*.db
+*.sqlite
+*.sqlite3
+
+# Credentials (last so fixture allowlists cannot re-include them).
+.env
+.env.*
+!/.env.example
+*.pem
+*.key
+*.p12
+*.pfx

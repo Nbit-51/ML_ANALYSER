@@ -63,7 +63,7 @@ function metricPreference(metric) {
   return null;
 }
 
-function interpretMetricChange(baseline, candidate, metric, direction = metricPreference(metric)) {
+function interpretMetricChange(baseline, candidate, metric, direction = null) {
   if (!Number.isFinite(baseline) || !Number.isFinite(candidate)) return "No comparable measurement.";
   if (candidate === baseline) return "Unchanged from baseline.";
   const movement = candidate > baseline ? "higher" : "lower";

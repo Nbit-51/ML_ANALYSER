@@ -6,6 +6,7 @@ from collections import Counter
 from pathlib import Path
 from uuid import uuid4
 
+from ml_analyser.adapters.registry import default_registry
 from ml_analyser.agent.compiler import DryRunExperimentCompiler
 from ml_analyser.agent.ids import stable_id
 from ml_analyser.agent.models import (
@@ -17,8 +18,10 @@ from ml_analyser.agent.models import (
     SuccessContract,
 )
 from ml_analyser.agent.ports import ExperimentCompiler, ModelProvider, RepositoryInspector
+from ml_analyser.agent.providers import ProviderResponseError
 from ml_analyser.agent.state import RunLifecycle
 from ml_analyser.agent.state_graph import InventoryStateGraphBuilder
+from ml_analyser.tools.capabilities import detect_capabilities
 from ml_analyser.tools.repository_context import RepositoryContextTool
 
 
@@ -78,6 +81,9 @@ class PreviewOrchestrator:
             inventory_evidence,
             *RepositoryContextTool().collect(project_root, inventory, success_contract),
         ]
+        summary, capability_evidence = detect_capabilities(inventory)
+        summary.adapters = default_registry().describe(project_root)
+        # Capability facts stay inspectable; bounded excerpts alone enter model context.
 
         lifecycle.transition(RunState.DIAGNOSING)
         context = AnalysisContext(
@@ -90,6 +96,9 @@ class PreviewOrchestrator:
 
         lifecycle.transition(RunState.HYPOTHESIZING)
         hypotheses = await self._provider.propose_hypotheses(context)
+        known_ids = {item.id for item in evidence}
+        if any(set(item.evidence_ids) - known_ids for item in hypotheses):
+            raise ProviderResponseError("provider referenced nonexistent evidence IDs")
 
         lifecycle.transition(RunState.DESIGNING)
         experiments = [self._compiler.compile(hypothesis, context) for hypothesis in hypotheses]
@@ -122,8 +131,10 @@ class PreviewOrchestrator:
             state_history=lifecycle.history,
             inventory=inventory,
             state_graph=state_graph,
-            evidence=evidence,
+            evidence=[*evidence, *capability_evidence],
             hypotheses=hypotheses,
             experiments=experiments,
             warnings=warnings,
+            repository_summary=summary,
+            success_contract=success_contract,
         )
