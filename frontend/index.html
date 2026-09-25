@@ -5,7 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ML Analyser | Experiment workbench</title>
   <link rel="stylesheet" href="/static/styles.css">
+  <script src="/static/metrics.js" defer></script>
   <script src="/static/app.js" defer></script>
+  <script src="/static/analysis.js" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -16,13 +18,57 @@
     <section class="hero">
       <div class="eyebrow">EXPERIMENT WORKBENCH</div>
       <h1>Controlled experiments.<br><em>Measured outcomes.</em></h1>
-      <p>Inspect a project, review one falsifiable experiment, approve its exact scope, and compare measured outcomes against your guardrails.</p>
+      <p>Inspect an ML repository, define the outcome you care about, and review evidence-backed hypotheses. Run controlled experiments when an adapter supports the project.</p>
       <div class="hero-steps"><span>01 · Diagnose</span><span>02 · Approve</span><span>03 · Measure</span><span>04 · Decide</span></div>
+    </section>
+
+    <section class="panel repository-analysis" aria-labelledby="analysis-title">
+      <div class="section-heading"><span class="section-number">01</span><div><p class="kicker">REPOSITORY ANALYSIS</p><h2 id="analysis-title">Analyse an ML repository</h2></div></div>
+      <p class="analysis-intro">Choose any local repository folder inside <code>workspaces/</code>. The preview inventories files, reads a few relevant excerpts and prior result records, and proposes tests. It does not run project code.</p>
+      <p class="analysis-intro">With the Nebius provider enabled, sampled repository excerpts and result records are sent to Nebius for reasoning. Do not preview a private repository until you are comfortable sharing those excerpts. Model proposals may contain unsupported implementation details; verify the cited code before acting.</p>
+      <div class="score-guide"><strong>How to read the goal</strong><p>The objective is the score you want to improve. A target is the desired value. A guardrail is a limit another score must respect. A proposal becomes a measured improvement only after a compatible experiment runs.</p></div>
+      <form id="analysis-form" class="analysis-form">
+        <label class="field field-wide">Project folder inside workspaces
+          <input id="analysis-path" name="project_path" placeholder="my-ml-project" required autocomplete="off" spellcheck="false">
+        </label>
+        <label class="field">Objective metric
+          <input id="analysis-metric" name="metric" placeholder="e.g. f1, validation_rmse, p50_latency_ms" required autocomplete="off" spellcheck="false">
+        </label>
+        <label class="field">Direction
+          <select id="analysis-direction" name="direction"><option value="maximize">Higher is better</option><option value="minimize">Lower is better</option></select>
+        </label>
+        <label class="field">Target value (optional)
+          <input id="analysis-target" name="target" type="number" placeholder="Desired value" step="any">
+        </label>
+        <label class="field">Minimum improvement (optional)
+          <input id="analysis-improvement" name="minimum_improvement" type="number" placeholder="0" min="0" step="any">
+        </label>
+        <label class="field">Guardrail metric (optional)
+          <input id="analysis-guardrail-metric" name="guardrail_metric" placeholder="e.g. recall or memory_mb" autocomplete="off" spellcheck="false">
+        </label>
+        <label class="field">Guardrail limit (optional)
+          <input id="analysis-guardrail-threshold" name="guardrail_threshold" type="number" placeholder="Threshold" step="any">
+        </label>
+        <label class="field">Guardrail rule
+          <select id="analysis-guardrail-operator" name="guardrail_operator"><option value="gte">At least</option><option value="lte">At most</option></select>
+        </label>
+        <button class="primary-button analysis-submit" id="analysis-submit" type="submit">Analyse repository <span>→</span></button>
+      </form>
+      <p id="analysis-error" class="error-box hidden" role="alert"></p>
+      <div id="analysis-output" class="analysis-output hidden" aria-live="polite">
+        <div class="analysis-summary"><strong id="analysis-status"></strong><span id="analysis-provider"></span></div>
+        <div class="analysis-note" id="analysis-metric-guide"></div>
+        <div id="analysis-counts" class="analysis-counts"></div>
+        <div id="analysis-recorded" class="analysis-recorded"></div>
+        <div class="analysis-columns"><div><h3>Hypotheses to test</h3><div id="analysis-hypotheses"></div></div><div><h3>Proposed experiments</h3><div id="analysis-experiments"></div></div></div>
+        <h3>Evidence reviewed</h3><div id="analysis-evidence"></div>
+        <div id="analysis-warnings" class="analysis-warnings"></div>
+      </div>
     </section>
 
     <div class="workspace-grid">
       <section class="panel setup" aria-labelledby="setup-title">
-        <div class="section-heading"><span class="section-number">01</span><div><p class="kicker">EXPERIMENT SETUP</p><h2 id="setup-title">Choose a project</h2></div></div>
+        <div class="section-heading"><span class="section-number">02</span><div><p class="kicker">CONTROLLED DEMOS</p><h2 id="setup-title">Choose a measured example</h2></div></div>
         <div class="adapter-options" role="radiogroup" aria-label="Demo project">
           <label class="adapter-card selected"><input type="radio" name="adapter" value="ml-training" checked><span class="card-icon">◈</span><strong>ML training</strong><small>Hidden learning rate failure · validation F1</small></label>
           <label class="adapter-card"><input type="radio" name="adapter" value="backend-benchmark"><span class="card-icon">▤</span><strong>Backend benchmark</strong><small>Slow response config · P95 latency</small></label>
@@ -33,7 +79,7 @@
       </section>
 
       <section class="panel run-panel" aria-labelledby="run-title">
-        <div class="section-heading"><span class="section-number">02</span><div><p class="kicker">RUN CONTROL</p><h2 id="run-title">Experiment timeline</h2></div></div>
+        <div class="section-heading"><span class="section-number">03</span><div><p class="kicker">RUN CONTROL</p><h2 id="run-title">Experiment timeline</h2></div></div>
         <div class="run-status"><span id="status-dot" class="status-dot idle"></span><strong id="status-label">Ready to prepare</strong><span id="run-id" class="run-id"></span></div>
         <ol class="timeline" id="timeline" aria-live="polite"></ol>
         <div id="plan-review" class="plan-review hidden">
@@ -50,7 +96,7 @@
     </div>
 
     <section class="panel results hidden" id="results" aria-labelledby="results-title">
-      <div class="section-heading"><span class="section-number">03</span><div><p class="kicker">MEASURED OUTCOME</p><h2 id="results-title">Evidence & decision</h2></div><span id="decision-pill" class="decision-pill"></span></div>
+      <div class="section-heading"><span class="section-number">04</span><div><p class="kicker">MEASURED OUTCOME</p><h2 id="results-title">Evidence & decision</h2></div><span id="decision-pill" class="decision-pill"></span></div>
       <p class="decision-reason" id="decision-reason"></p>
       <div class="metric-grid" id="metrics"></div>
       <div class="result-columns"><div><h3>Evidence ledger</h3><div id="evidence"></div></div><div><h3>Experiment lineage</h3><div id="lineage"></div><h3>Change disposition</h3><p id="disposition"></p></div></div>

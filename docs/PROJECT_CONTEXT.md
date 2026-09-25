@@ -2,7 +2,7 @@
 
 ## Purpose
 
-ML Analyser is an autonomous evidence-driven optimization agent for the Nebius x NVIDIA Global AI Hackathon 2026. Its purpose is to diagnose failures in a technical project, design and safely execute controlled experiments, and retain changes only when they are supported by empirical evidence. ML is the flagship adapter and primary demonstration, not a permanent limit on the core engine.
+ML Analyser is an autonomous evidence-driven optimization agent for the Nebius x NVIDIA Global AI Hackathon 2026. Its purpose is to diagnose failures in an ML project, design and safely execute controlled experiments, and retain changes only when they are supported by empirical evidence. The ML preview accepts user-defined metrics across ML tasks; a smaller backend benchmark adapter demonstrates reuse of the core engine.
 
 Repository analysis is an input capability, not the product's central innovation. The defensible product is the closed loop of structured project state, falsifiable hypotheses, reproducible and reversible execution, constraint-aware evaluation, persistent experiment lineage, and adaptive experiment selection. The category distinction is intentional: coding agents optimize code; this system optimizes measurable outcomes.
 
@@ -47,7 +47,7 @@ Examples of later adapters could include data pipelines, inference services, web
 
 ## Current phase
 
-**Phase 3: two executable adapters and local run workbench.**
+**Phase 3: two executable adapters, general repository preview, and local run workbench.**
 
 Implemented through this phase:
 
@@ -57,6 +57,7 @@ Implemented through this phase:
 - strict domain models and provider/tool/evidence/persistence ports;
 - explicit run lifecycle transition enforcement;
 - bounded repository inventory and deterministic project state graph construction;
+- bounded read-only README, source, and prior-result sampling for arbitrary local repository previews;
 - a deterministic offline hypothesis provider and dry-run experiment compiler;
 - deterministic objective, guardrail, and multidimensional-budget evaluation;
 - an append-only SQLite evidence ledger and persistent experiment DAG;
@@ -67,8 +68,9 @@ Implemented through this phase:
 - a bounded backend HTTP benchmark adapter and non-ML fixture;
 - a declared Python training adapter and deterministic ML training fixture;
 - polling-based browser workbench with persisted run-state snapshots and events;
+- generic preview form with objective/guardrail entry, recorded-score provenance, and beginner metric interpretation;
 - an environment-configured Nebius Token Factory provider with structured-output and grounding validation;
-- a read-only live-provider smoke test for use once credentials and a model ID are available;
+- a successful read-only live-provider smoke test and browser preview using Nemotron 3 Super through Nebius Token Factory on September 25, 2026;
 - automated API, security, provider-contract, persistence, evaluator, and end-to-end tests.
 
 Explicitly not implemented yet:
@@ -77,7 +79,7 @@ Explicitly not implemented yet:
 - repository ingestion from remote URLs/uploads;
 - production experiment scheduling and recovery;
 - arbitrary training scripts without an explicit experiment manifest;
-- live Nebius/Nemotron calls (the provider exists, but no credential/model deployment has been validated);
+- a general-purpose execution adapter for arbitrary ML repositories (preview is read-only; execution remains manifest-bound);
 - authentication;
 - durable worker scheduling, cancellation, and restart recovery;
 - domain adapters beyond the documented placeholders.
@@ -153,6 +155,8 @@ These are initial decisions, not immutable commitments. Changes should be record
 
 The repository contains `.env.example` with empty placeholders. Real values must be supplied through a local ignored `.env` file or the deployment environment.
 
+The test suite forces the mock provider even when a developer has configured a private local `.env`, so routine tests never spend live inference credits.
+
 Provider variables include:
 
 - `ML_ANALYSER_MODEL_PROVIDER` (`mock` by default; `nebius` enables live inference)
@@ -182,7 +186,7 @@ A convincing end-to-end demo should show:
 
 ## Near-term milestones
 
-1. Validate the implemented Token Factory adapter against a currently available NVIDIA Nemotron model when credentials arrive.
+1. Keep improving source-grounding checks for live model proposals; a schema-valid hypothesis can still make an unsupported implementation claim.
 2. Test the approved ML experiment flow with live reasoning and debug any model-specific schema or grounding issues.
 3. Add retained-candidate diff review and a separately approved promotion workflow.
 4. Add structured observability, cancellation/recovery, and production-grade sandbox integration.

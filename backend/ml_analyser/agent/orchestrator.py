@@ -19,6 +19,7 @@ from ml_analyser.agent.models import (
 from ml_analyser.agent.ports import ExperimentCompiler, ModelProvider, RepositoryInspector
 from ml_analyser.agent.state import RunLifecycle
 from ml_analyser.agent.state_graph import InventoryStateGraphBuilder
+from ml_analyser.tools.repository_context import RepositoryContextTool
 
 
 class PreviewOrchestrator:
@@ -73,7 +74,10 @@ class PreviewOrchestrator:
                 "skipped_paths": len(inventory.skipped_paths),
             },
         )
-        evidence = [inventory_evidence]
+        evidence = [
+            inventory_evidence,
+            *RepositoryContextTool().collect(project_root, inventory, success_contract),
+        ]
 
         lifecycle.transition(RunState.DIAGNOSING)
         context = AnalysisContext(

@@ -4,7 +4,15 @@
 
 AI coding assistants are good at proposing changes. ML Analyser treats every proposal as a hypothesis until measurement proves it helped.
 
-The primary workbench demonstration uses a small binary-classification training repository with an underpowered baseline configuration. A separate saved-prediction threshold fixture remains available as a read-only, faster evidence-loop example.
+The primary measured demonstration uses a small binary-classification training repository with an underpowered baseline configuration. The general preview accepts other ML repository types and user-defined metrics; it is read-only until an adapter explicitly supports execution. A separate saved-prediction threshold fixture remains available as a faster evidence-loop example.
+
+## General ML repository preview
+
+Place a local checkout under `workspaces/`. In the first section of `/app`, enter its relative folder name, choose the metric to improve, its direction, and any target or guardrail. The interface explains common scores in plain language, displays prior values with source paths, and distinguishes proposals from measured results. You can inspect any local ML repository here; the preview does not run its scripts or train a model.
+
+For example, the public [Leaf repository](https://github.com/Nbit-51/Leaf) is an inference-engine project rather than a classifier-training project. Clone it into `workspaces/leaf`, set the objective to `leaf_cpp_fp32_p50_ms` with **minimize**, and optionally protect `leaf_cpp_vs_pytorch_max_abs` with an **at-most** limit. A live Nemotron preview in the browser completed on September 25, 2026. It found two existing CIFAR-10/ResNet-18 benchmark records: prior median latencies **9.4825 ms** and **9.701 ms**, and maximum absolute difference about **4.62e-7**. These are values recorded by Leaf, not measurements performed by ML Analyser. A beginner can infer that lower median latency is desirable only if numerical agreement stays within the chosen guardrail and the workload, hardware, and measurement procedure remain comparable.
+
+The generated hypotheses are suggestions to verify, not established code facts. Source excerpts are partial; inspect the full cited file before applying a proposed change. No Leaf benchmark was executed or modified by this preview.
 
 ## Primary browser walkthrough
 
@@ -87,13 +95,13 @@ These values are calculated from the committed `validation_predictions.csv` fixt
 4. **Execution:** Submit the approved request and point out the explicit lifecycle states.
 5. **Evidence:** Compare confusion counts and metrics, then inspect evidence IDs and the parent experiment.
 6. **Decision:** Show why the candidate was accepted and where the run was persisted.
-7. **Vision:** Explain that Nemotron will replace the deterministic provider for diagnosis and skeptical review, while deterministic policies retain authority over safety and acceptance.
+7. **Reasoning:** Show the live Nemotron preview separately from the measured fixture. Deterministic policies still retain authority over safety and acceptance.
 
 ## Honest limitations
 
 - This is a narrow threshold-calibration adapter over saved binary-classification predictions.
 - The primary ML adapter runs a declared training script; arbitrary commands and patch generation remain unsupported.
-- The mock provider is rule-based and offline; no claim is made that Nemotron was called.
+- The mock provider is rule-based and offline; the separately validated live preview uses Nebius/Nemotron but does not perform the measured fixture run.
 - The state graph currently models repository/category/file provenance, not parsed code semantics.
 - The SQLite store and process-local background tasks are appropriate for the local workbench, not distributed experiment workers.
 

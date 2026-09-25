@@ -160,10 +160,10 @@ function metricValue(result, metric, label) {
 }
 
 function formatMetric(value, metric) {
-  if (typeof value !== "number") return "—";
-  if (metric.includes("latency")) return `${value.toFixed(2)} ms`;
-  if (metric === "throughput_requests_per_second") return `${value.toFixed(1)} req/s`;
-  return value.toFixed(3);
+  if (metric === "throughput_requests_per_second" && typeof value === "number") {
+    return `${value.toFixed(1)} req/s`;
+  }
+  return formatMetricValue(value, metric);
 }
 
 function renderResult(result) {
@@ -179,9 +179,13 @@ function renderResult(result) {
     : ["p95_latency_ms", "p50_latency_ms", "error_rate", "throughput_requests_per_second"];
   for (const name of metricNames) {
     const card = element("div", "", "metric");
+    const baselineValue = metricValue(result, name, "baseline");
+    const candidateValue = metricValue(result, name, "candidate");
     card.append(element("span", name.replaceAll("_", " "), "metric-label"));
-    card.append(element("strong", formatMetric(metricValue(result, name, "candidate"), name), "improved"));
-    card.append(element("small", `Baseline ${formatMetric(metricValue(result, name, "baseline"), name)}`));
+    card.append(element("strong", formatMetric(candidateValue, name), "improved"));
+    card.append(element("small", `Baseline ${formatMetric(baselineValue, name)}`));
+    card.append(element("small", describeMetric(name), "metric-meaning"));
+    card.append(element("small", interpretMetricChange(baselineValue, candidateValue, name), "metric-meaning"));
     metrics.append(card);
   }
   $("evidence").replaceChildren(...result.evidence.map((item) => {

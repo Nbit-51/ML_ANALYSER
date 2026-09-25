@@ -1,14 +1,14 @@
 # ML Analyser
 
-ML Analyser is an evidence-driven engineering agent for improving measurable outcomes in software and ML projects. ML is the primary demonstration, while the underlying engine uses domain-neutral goals, metrics, constraints, experiments, observations, and decisions.
+ML Analyser is an evidence-driven agent for analyzing and improving ML repositories across tasks such as classification, regression, and inference benchmarking. Users define the metric that matters to their project; the analyzer does not assume every repository trains a classifier or reports F1. A small backend benchmark adapter demonstrates that the verification engine is reusable beyond ML.
 
 It diagnoses technical failures, turns explanations into falsifiable hypotheses, compiles controlled experiments, executes bounded tools, and retains changes only when recorded evidence supports them.
 
-> Status: the local ML training and backend benchmark workflows are implemented and tested. Both support plan review, fingerprint-bound single-use approval, isolated baseline/candidate execution, measured decisions, and persisted evidence. The Token Factory provider is contract-tested but awaits live validation with credentials and a current Nemotron model ID.
+> Status: the local ML training and backend benchmark workflows support plan review, fingerprint-bound single-use approval, isolated baseline/candidate execution, measured decisions, and persisted evidence. General repository preview works with the mock provider or NVIDIA Nemotron through Nebius Token Factory. A live read-only Nemotron preview was validated through the browser on September 25, 2026; arbitrary ML repositories are not yet executable by the local adapters.
 
 ## What works today
 
-- `POST /api/v1/runs/preview` inventories a project inside `workspaces/`, builds its state graph, proposes deterministic falsifiable hypotheses, and compiles non-executed experiment specifications.
+- `POST /api/v1/runs/preview` inventories a project inside `workspaces/`, builds its state graph, samples bounded README/source/prior-result evidence, proposes falsifiable hypotheses with the selected model provider, and compiles non-executed experiment specifications. With the default mock provider, proposals are deterministic.
 - `POST /api/v1/runs/ml-threshold-demo` requires explicit approval, measures saved binary-classification predictions, performs a deterministic threshold sweep, evaluates the objective, recall guardrail, and budget, then persists evidence and experiment lineage to SQLite.
 - `POST /api/v1/runs/backend-benchmark/prepare` creates a complete experiment plan and a persisted approval bound to the plan's canonical fingerprint.
 - `POST /api/v1/runs/approvals/{approval_id}` approves or rejects exactly one pending scope. An approved scope is single-use; changed plans and replay attempts are rejected.
@@ -32,6 +32,12 @@ The candidate passes the `F1 +0.01` objective, `recall >= 0.8` guardrail, and co
 The backend fixture provides a second, non-ML proof. In the final local validation on September 21, 2026, P95 latency improved from **50.23 ms** to **22.12 ms**, error rate remained `0`, and baseline/candidate response hashes were identical. The accepted candidate was retained in an isolated workspace and the original project was unchanged. Latency varies by host, so automated tests assert the contract (`candidate P95 < 40 ms` and improvement `> 10 ms`) rather than this one observed value.
 
 The training fixture is a small, deterministic logistic-regression project. On the included data, the baseline produced F1 **0.6667** and accuracy **0.5000**; the approved configuration candidate produced F1 **1.0000** and accuracy **1.0000**, with recall **1.0000** in both cases. The source fixture was unchanged; the accepted configuration remains in an isolated candidate workspace. This fixture demonstrates the workflow, not broad model-quality generalization.
+
+### Reading the scores
+
+A score is meaningful only with its dataset, evaluation procedure, and direction. F1 balances precision and recall (higher is usually better); precision is the share of positive predictions that were correct, while recall is the share of actual positives found. Accuracy is the overall correct-prediction share, but can be misleading on imbalanced data. RMSE summarizes prediction error (lower is better). P50 latency is the median runtime and P95 is the runtime at or below which 95% of measurements finished (lower is better for the same workload). Maximum absolute difference measures the largest output deviation from a reference (smaller means closer agreement). The browser explains these and other common metrics beside the values.
+
+For a beginner, the useful inference is **not** simply “the number changed.” Compare baseline and candidate on the same evaluation setup, check whether the primary goal improved by the required amount, then confirm every guardrail still passes. In read-only preview, a number found in an existing results file is labeled a *prior record*: it can guide a hypothesis, but it does not prove a proposed change worked. Unknown custom metrics require the repository's own definition.
 
 ## The problem
 
@@ -70,7 +76,7 @@ The defensible system is the combination of:
 
 The model supports reasoning. Execution, lineage, evaluation, and evidence make the recommendations verifiable.
 
-The same core loop can optimize different measurable systems through adapters:
+Within ML, the same preview can use a user-specified objective and guardrails for different model types, datasets, and workflows. Controlled execution currently requires a declared adapter; it does not run arbitrary training or benchmark commands. The same core loop also supports different measurable systems through adapters:
 
 | Adapter | Example objective | Example guardrails |
 | --- | --- | --- |
@@ -186,11 +192,13 @@ Planned additions:
 
 ## Nebius and NVIDIA integration
 
-The primary reasoning provider targets an **NVIDIA Nemotron open-source model served through Nebius Token Factory**. The exact model identifier is selected through `NEBIUS_MODEL` after API access is available and the live Token Factory model list is checked; it is intentionally not guessed or hard-coded. Nemotron supports structured diagnosis and experiment planning, while deterministic code enforces schemas, evidence references, budgets, policies, and acceptance rules.
+The primary reasoning provider uses an **NVIDIA Nemotron open-source model served through Nebius Token Factory**. The model identifier is selected through `NEBIUS_MODEL` rather than hard-coded. Nemotron supports structured diagnosis and experiment planning, while deterministic code enforces schemas, evidence references, budgets, policies, and acceptance rules.
 
-The provider boundary keeps orchestration independent from any one inference API. The implemented Token Factory adapter follows the official [Token Factory quickstart](https://docs.tokenfactory.nebius.com/quickstart) and [structured-output guide](https://docs.tokenfactory.nebius.com/ai-models-inference/json): it calls the OpenAI-compatible chat-completions endpoint, requests JSON-schema output, uses environment-based credentials, and exposes configuration, transport, and validation failures without inventing completions. Contract tests use HTTPX's in-memory transport, so they require no secret or paid request. Live provider validation remains a clearly tracked next step.
+The provider boundary keeps orchestration independent from any one inference API. The implemented Token Factory adapter follows the official [Token Factory quickstart](https://docs.tokenfactory.nebius.com/quickstart) and [structured-output guide](https://docs.tokenfactory.nebius.com/ai-models-inference/json): it calls the OpenAI-compatible chat-completions endpoint, requests JSON-schema output, uses environment-based credentials, and exposes configuration, transport, and validation failures without inventing completions. Contract tests use HTTPX's in-memory transport, so they require no secret or paid request. A live frontend preview succeeded with `nvidia/nemotron-3-super-120b-a12b`; this validates read-only reasoning, not arbitrary project execution.
 
 No API credentials belong in this repository. `.env.example` contains variable names only; local values should be stored in an ignored `.env` file or a deployment secret manager.
+
+When the live provider is enabled, bounded repository excerpts and prior-result records are sent to Nebius as model context. Review privacy requirements before previewing a private repository. Schema and evidence-ID validation do not prove every statement is factually correct; inspect cited source before acting on a proposed intervention.
 
 ## Repository layout
 
@@ -265,7 +273,9 @@ Then open:
 - OpenAPI UI: <http://127.0.0.1:8000/docs>
 - browser workbench: <http://127.0.0.1:8000/app>
 
-The workbench uses the mock provider by default. Choose the ML training or backend benchmark fixture, inspect the generated plan and success contract, approve its exact scope, then follow the run timeline and measured decision. Its local background tasks are process-bound: restarting the API interrupts active work. For an untrusted uploaded repository, use an external sandbox rather than this local runner.
+The workbench uses the mock provider by default. For a general ML repository, place a local checkout inside `workspaces/`, enter its relative folder name and a project-defined objective (for example, F1, validation RMSE, or P50 latency), then select **Analyse repository**. This read-only preview reports inventory, bounded source/prior-result evidence, and proposals; it does not run a new experiment. For a measured run, choose the ML training or backend benchmark fixture, inspect the generated plan and success contract, approve its exact scope, then follow the run timeline and measured decision. Local background tasks are process-bound: restarting the API interrupts active work. For an untrusted uploaded repository, use an external sandbox rather than this local runner.
+
+For the public [Leaf repository](https://github.com/Nbit-51/Leaf), an inference-engine example, clone it locally into `workspaces/leaf` and enter `leaf` in the preview form. Its committed CIFAR-10/ResNet-18 result files report prior `leaf_cpp_fp32_p50_ms` values of **9.4825 ms** and **9.701 ms**, with `leaf_cpp_vs_pytorch_max_abs` around **4.62e-7**. These are repository-recorded results from a particular workload and environment, not scores measured by ML Analyser. In the browser, you can set a lower-is-better latency goal and a maximum-absolute-difference guardrail, then inspect the generated hypotheses. Do not interpret a proposal as an optimization until a compatible benchmark is executed and compared with a baseline.
 
 ### Run the hidden-failure demonstration
 
@@ -283,9 +293,9 @@ The JSON response contains the hypothesis, baseline and candidate confusion matr
 
 The backend proof deliberately uses separate prepare, approve, and execute calls so a reviewer can inspect the complete scope before granting execution. See [Backend benchmark demo](docs/BACKEND_BENCHMARK_DEMO.md) for PowerShell and API examples plus the measured result.
 
-### Validate Token Factory when access is available
+### Validate Token Factory
 
-Set `ML_ANALYSER_MODEL_PROVIDER=nebius`, `NEBIUS_API_KEY`, and a currently available NVIDIA Nemotron ID in `NEBIUS_MODEL`. Then run `python scripts/validate_nebius.py` from the repository root. This performs a read-only preview and validates the returned hypotheses; it does not execute project code. The default request mode is `json_schema`. If the selected model supports JSON-object mode instead, set `ML_ANALYSER_NEBIUS_RESPONSE_FORMAT=json_object` and repeat. No credential value is printed. Passing this smoke test establishes provider connectivity and schema compatibility; the full approved experiment should then be tested through `/app`.
+Set `ML_ANALYSER_MODEL_PROVIDER=nebius`, `NEBIUS_API_KEY`, and a currently available NVIDIA Nemotron ID in `NEBIUS_MODEL`. Then run `python scripts/validate_nebius.py` from the repository root. This performs a read-only preview and validates the returned hypotheses; it does not execute project code. The default request mode is `json_schema`. If the selected model supports JSON-object mode instead, set `ML_ANALYSER_NEBIUS_RESPONSE_FORMAT=json_object` and repeat. No credential value is printed. The live smoke test and browser preview have passed with Nemotron 3 Super. The next step is debugging and validating a separately approved, adapter-supported measured run; preview success alone is not execution proof.
 
 ### Quality checks
 
@@ -294,6 +304,7 @@ pytest
 ruff check .
 ruff format --check backend
 mypy backend/ml_analyser
+node --test frontend/metrics.test.js
 ```
 
 CI additionally enforces at least 90% backend statement coverage.
@@ -317,7 +328,7 @@ CI additionally enforces at least 90% backend statement coverage.
 - [x] Add a declared ML training adapter and an end-to-end measured fixture.
 - [x] Add a smaller backend benchmark adapter to prove core generality.
 - [ ] Prototype AI-agent evaluation if core milestones are complete.
-- [ ] Live-validate NVIDIA Nemotron through the implemented Nebius Token Factory provider.
+- [x] Live-validate a read-only NVIDIA Nemotron preview through Nebius Token Factory.
 - [x] Build the browser workbench and polling-based run view.
 - [x] Create an end-to-end demonstration on a small representative ML training repository.
 - [ ] Add production deployment, stronger observability, and an external execution sandbox.
