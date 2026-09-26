@@ -18,6 +18,8 @@ The `generic_process` adapter requires Linux and bubblewrap and fails closed whe
 
 These limits are per process rather than aggregate cgroup accounting. System runtimes remain visible, host namespace policy must permit bubblewrap, and this prototype has not been established as a multi-tenant hostile-code service. For untrusted shared workloads, use a separately provisioned, reviewed worker/container or VM with no credentials and aggregate quotas. See [the benchmark protocol](GENERIC_BENCHMARKS.md) for the exact implemented boundary.
 
+CI uses Ubuntu 24.04 and a root-owned copy of bubblewrap at `/usr/local/libexec/ml-analyser-ci/bwrap`. A [CI-only AppArmor profile](../.github/ci/bwrap.apparmor) permits that executable to create user namespaces, following [Ubuntu's per-application namespace policy](https://documentation.ubuntu.com/security/security-features/privilege-restriction/apparmor/). It does not disable AppArmor globally or alter the system bubblewrap executable. A sandbox smoke check runs before the full tests; namespace failures remain errors rather than skipped tests or unsandboxed execution. This runner setup is not installed on user machines by the application.
+
 ## Data and credential handling
 
 - Put Token Factory credentials in ignored `.env` or a managed secret store; never in manifests, fixtures, logs, or reports.

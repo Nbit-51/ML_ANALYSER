@@ -1,0 +1,8 @@
+# CI-only user-namespace permission for the dedicated, root-owned executable.
+# The runner's global AppArmor policy and /usr/bin/bwrap remain unchanged.
+# Bubblewrap still enforces filesystem/network namespaces and drops capabilities.
+abi <abi/4.0>,
+
+profile ml-analyser-ci-bwrap /usr/local/libexec/ml-analyser-ci/bwrap flags=(unconfined) {
+    userns,
+}
