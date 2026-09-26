@@ -1,10 +1,56 @@
 # ML Analyser
 
-An evidence-driven repository benchmarking workbench, with ML as its flagship use case. Define success, review a hypothesis, approve an experiment, and compare measured baseline/candidate results.
+[![CI](https://github.com/Nbit-51/ML_ANALYSER/actions/workflows/ci.yml/badge.svg)](https://github.com/Nbit-51/ML_ANALYSER/actions/workflows/ci.yml)
+
+### From an optimization hypothesis to a measured engineering decision.
+
+ML Analyser helps developers answer a concrete question: **did this change improve the project while preserving correctness?** It combines NVIDIA Nemotron reasoning with approval-gated experiments, baseline/candidate measurements and an inspectable evidence trail. ML is the flagship use case; the same engine also supports HTTP services and declared CLI, build, test-suite and microbenchmark harnesses.
+
+Set a goal such as **lower validation RMSE** or **reduce P95 latency without changing the response**. Review the proposed explanation and declared configuration change, approve the experiment, then see what the measurements support: **accepted, rejected or inconclusive**.
 
 **Nemotron reasons. Adapters measure. Deterministic rules decide.**
 
-Built with FastAPI, SQLite and lightweight JavaScript/SVG. Includes an offline mock provider.
+## The model and its role
+
+Our live reasoning configuration uses **NVIDIA Nemotron 3 Super 120B-A12B**, served through **Nebius Token Factory** as `nvidia/nemotron-3-super-120b-a12b`.
+
+It is a **reasoning large language model (LLM)** with a hybrid **Mamba–Transformer, mixture-of-experts (MoE)** architecture: roughly **120 billion total parameters, with 12 billion active per token**. MoE activates a subset of the model's experts for each token. See [NVIDIA's model description](https://research.nvidia.com/labs/nemotron/Nemotron-3-Super/) and [Nebius's integration example](https://github.com/nebius/token-factory-cookbook/blob/main/models/nemotron/nemotron3-super-120B.md).
+
+In this project, Nemotron reads bounded repository excerpts and the success contract, then returns structured, falsifiable hypotheses citing evidence IDs. We use the hosted model through its API; we do not train or fine-tune it. The model cannot execute commands, invent benchmark measurements or override the evaluator. A deterministic **mock provider** keeps demos and CI reproducible without credentials.
+
+## How an experiment works
+
+```mermaid
+flowchart TD
+    A["Repository + success contract"] --> B["Read-only preview<br/>Capabilities and selected evidence"]
+    B --> C["Nemotron hypothesis<br/>Evidence references + expected outcome"]
+    C --> D["Prepare declared change<br/>Review exact plan and approve once"]
+    D --> E["Isolated baseline and candidate<br/>Execute through a registered adapter"]
+    E --> F["Measured results<br/>Metrics, samples and reliability"]
+    F --> G{"Deterministic evaluation"}
+    G --> H["Accepted<br/>Retain candidate copy"]
+    G --> I["Rejected or inconclusive<br/>Discard candidate copy"]
+    H --> J["Persisted report + evidence + lineage"]
+    I --> J
+```
+
+**Example: the HTTP fixture.** The contract asks for P95 latency at or below **40 ms**, an improvement of at least **10 ms**, **zero errors** and an **unchanged response hash**. The declared candidate reduces an artificial response delay. The adapter runs warm-ups and repeated request batches; the workbench displays latency distributions, guardrail results and reliability. These are demonstration targets, not promised benchmark results. A faster response alone is insufficient if correctness or reliability fails.
+
+## What the reviewer can inspect
+
+- **Repository understanding:** source-byte language composition, detected capabilities and explicit execution readiness.
+- **Measurement quality:** baseline/candidate charts, absolute and percentage deltas, raw-sample distributions and variability.
+- **Decision traceability:** objective and guardrail status, selectable experiment lineage, evidence records and persisted reports.
+- **Controlled changes:** manifest-declared JSON configuration edits, fingerprint-bound approval and separate workspaces. The original repository stays unchanged.
+
+```mermaid
+flowchart LR
+    UI["Browser workbench<br/>JavaScript + SVG"] <--> API["FastAPI<br/>Contracts, approval and evaluation"]
+    API --> LLM["Nebius / Nemotron<br/>Hypotheses"]
+    API --> RUN["Adapter registry<br/>ML / HTTP / generic process"]
+    API <--> DB[("SQLite<br/>Evidence, approvals and lineage")]
+    RUN --> COPY["Isolated experiment copies"]
+```
 
 ## Run locally
 
@@ -23,15 +69,9 @@ python -m uvicorn ml_analyser.main:app --app-dir backend --reload
 
 Open [the workbench](http://127.0.0.1:8000/app) or [API docs](http://127.0.0.1:8000/docs). The mock provider works without an API key.
 
-To enable live reasoning, copy [.env.example](.env.example) to `.env` **only if `.env` does not already exist**. Set `ML_ANALYSER_MODEL_PROVIDER=nebius`, `NEBIUS_API_KEY` and `NEBIUS_MODEL`. Keep credentials local; `.env` is ignored. Live reasoning sends selected repository excerpts to Nebius.
+To enable live reasoning, copy [.env.example](.env.example) to `.env` **only if `.env` does not already exist**. Set `ML_ANALYSER_MODEL_PROVIDER=nebius`, your `NEBIUS_API_KEY`, and `NEBIUS_MODEL=nvidia/nemotron-3-super-120b-a12b`. Use the `NEBIUS_BASE_URL` for your Nebius region; the demonstrated configuration uses `https://api.tokenfactory.us-central1.nebius.com/v1`. Keep credentials local; `.env` is ignored. Live reasoning sends selected repository excerpts to Nebius.
 
-## Try an experiment
-
-1. Select the ML or HTTP demo, or preview a repository under `workspaces/`.
-2. Set an objective and guardrails. Inspect the evidence and hypothesis.
-3. Prepare the plan, review the exact change, and explicitly approve execution.
-4. Inspect comparison charts, sample distributions, reliability, guardrails and experiment lineage.
-5. Open the persisted report and evidence. Accepted candidates stay in isolated copies; the original repository stays unchanged.
+Start with the ML or HTTP demo in the workbench: set the contract, prepare and approve the plan, then inspect the measured comparison and evidence. Repositories for preview belong under `workspaces/` by default.
 
 ## Supported benchmarks
 
