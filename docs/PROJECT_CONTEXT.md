@@ -40,3 +40,7 @@ CI retains the 90% coverage requirement and includes the new frontend transforma
 ## Configuration
 
 `ML_ANALYSER_WORKSPACE_ROOT`, `ML_ANALYSER_EXECUTION_ROOT`, and `ML_ANALYSER_STATE_DATABASE` control local paths. Repository paths remain constrained to the configured workspace. `ML_ANALYSER_MODEL_PROVIDER=mock` is offline; `nebius` requires `NEBIUS_API_KEY` and `NEBIUS_MODEL`. Never print or commit credentials. Live preview sends bounded selected excerpts to Nebius; ordinary tests force mock reasoning.
+
+## Onboarding update
+
+The landing page, guided goal presets, public GitHub/folder imports and optional GitHub OAuth are implemented. Source imports stay within managed copies; account-enabled requests use separate workspace/run storage. Live OAuth requires owner-provided credentials and an allowed-login list. See `docs/ONBOARDING.md`; the app does not fetch private repositories or execute arbitrary detected tests automatically.

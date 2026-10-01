@@ -84,6 +84,8 @@ jobs:
           node --check frontend/metrics.js
           node --check frontend/analytics.js
           node --check frontend/workbench.js
+          node --check frontend/onboarding.js
+          node --check frontend/session.js
 
       - name: Test score explanations
-        run: node --test frontend/metrics.test.js frontend/analytics.test.js
+        run: node --test frontend/metrics.test.js frontend/analytics.test.js frontend/onboarding.test.js

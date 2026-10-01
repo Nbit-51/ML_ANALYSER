@@ -10,51 +10,88 @@
   <script src="/static/workbench.js" defer></script>
   <script src="/static/app.js" defer></script>
   <script src="/static/analysis.js" defer></script>
+  <script src="/static/onboarding.js" defer></script>
+  <script src="/static/session.js" defer></script>
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="/app" aria-label="ML Analyser home"><span class="brand-mark">M</span><span>ML Analyser</span></a>
-    <span class="topbar-right"><span class="pulse"></span> Local experiment workbench <a href="/docs" target="_blank" rel="noreferrer">API docs ↗</a></span>
+    <a class="brand" href="/" aria-label="ML Analyser home"><span class="brand-mark">M</span><span>ML Analyser</span></a>
+    <nav class="account-nav"><a href="/">Home</a><span id="session-label">Local workspace</span><a id="sign-in-link" href="/login">Sign in</a><button id="logout-button" class="text-button hidden" type="button">Sign out</button></nav>
   </header>
   <main>
-    <section class="hero">
-      <div class="eyebrow">EXPERIMENT WORKBENCH</div>
-      <h1>Controlled experiments.<br><em>Measured outcomes.</em></h1>
-      <p>Inspect a repository, define the outcome you care about, and review evidence-backed hypotheses. Run controlled experiments when an adapter supports the project.</p>
-      <div class="hero-steps"><span>01 · Diagnose</span><span>02 · Approve</span><span>03 · Measure</span><span>04 · Decide</span></div>
+    <section class="workbench-intro">
+      <div class="eyebrow">YOUR EXPERIMENT WORKSPACE</div>
+      <h1>What would you<br><em>like to improve?</em></h1>
+      <p>Bring your repository, or start with an example that already has a benchmark.</p>
+      <div class="mode-tabs" role="tablist" aria-label="Start an experiment">
+        <button id="repo-tab" role="tab" aria-controls="repository-panel" aria-selected="true" type="button">My repository</button>
+        <button id="demo-tab" role="tab" aria-controls="demo-panel" aria-selected="false" type="button">Try a guided demo</button>
+      </div>
     </section>
 
-    <section class="panel repository-analysis" aria-labelledby="analysis-title">
+    <section id="repository-panel" role="tabpanel" class="panel repository-analysis" aria-labelledby="analysis-title">
       <div class="section-heading"><span class="section-number">01</span><div><p class="kicker">REPOSITORY ANALYSIS</p><h2 id="analysis-title">Repository overview</h2></div></div>
-      <p class="analysis-intro">Choose any local repository folder inside <code>workspaces/</code>. The preview inventories files, reads a few relevant excerpts and prior result records, and proposes tests. It does not run project code.</p>
-      <p class="analysis-intro">With the Nebius provider enabled, sampled repository excerpts and result records are sent to Nebius for reasoning. Do not preview a private repository until you are comfortable sharing those excerpts. Model proposals may contain unsupported implementation details; verify the cited code before acting.</p>
-      <div class="score-guide"><strong>How to read the goal</strong><p>The objective is the score you want to improve. A target is the desired value. A guardrail is a limit another score must respect. A proposal becomes a measured improvement only after a compatible experiment runs.</p></div>
+      <div class="intake-grid">
+        <form id="github-import-form" class="intake-card">
+          <span class="kicker">IMPORT FROM GITHUB</span><h3>Paste a repository URL</h3>
+          <label class="field">Public GitHub repository
+            <input id="github-url" type="url" placeholder="https://github.com/owner/project" required>
+          </label>
+          <button class="secondary-button" id="github-import-button" type="submit">Import repository →</button>
+          <small>Default branch only. No Git hooks, installs or project code run during import.</small>
+        </form>
+        <div class="intake-card">
+          <span class="kicker">IMPORT FROM YOUR COMPUTER</span><h3>Choose any project folder</h3>
+          <p>Works outside this app's directory, including local clones from other Git hosts.</p>
+          <label class="secondary-button folder-button" for="folder-picker">Choose folder →</label>
+          <input class="visually-hidden" id="folder-picker" type="file" webkitdirectory multiple>
+          <p id="folder-summary" class="help-text">Select a folder to review the import.</p>
+          <button id="folder-import-button" class="secondary-button hidden" type="button">Import selected files</button>
+        </div>
+      </div>
+      <p class="help-text">A source copy is stored on this app's server; originals stay unchanged. Common credential files, dependency folders and generated files are excluded. Review your selection for secrets in source code. Limit: 1,000 files, 2 MB each, 20 MB total. Private GitHub URLs are not fetched; choose your local clone instead.</p>
+      <p id="import-status" class="import-status" role="status">No repository selected yet.</p>
+      <p id="import-error" class="error-box hidden" role="alert"></p>
       <form id="analysis-form" class="analysis-form">
-        <label class="field field-wide">Project folder inside workspaces
-          <input id="analysis-path" name="project_path" placeholder="my-project" required autocomplete="off" spellcheck="false">
+        <details class="field-wide advanced-options">
+          <summary>Already have a project in the managed workspace?</summary>
+          <label class="field">Workspace folder name
+            <input id="analysis-path" name="project_path" placeholder="e.g. ml-training-demo" autocomplete="off" spellcheck="false">
+          </label>
+        </details>
+        <label class="field field-wide">What do you want to improve?
+          <select id="goal-preset">
+            <option value="latency">Make an API respond faster · P95 latency</option>
+            <option value="f1">Balance precision and recall · F1 score</option>
+            <option value="rmse">Reduce prediction error · validation RMSE</option>
+            <option value="accuracy">Improve prediction accuracy</option>
+            <option value="throughput">Process more requests per second · throughput</option>
+            <option value="custom">Use my project's own metric</option>
+          </select>
         </label>
-        <label class="field">Objective metric
-          <input id="analysis-metric" name="metric" placeholder="e.g. f1, validation_rmse, p50_latency_ms" required autocomplete="off" spellcheck="false">
-        </label>
-        <label class="field">Direction
-          <select id="analysis-direction" name="direction"><option value="maximize">Higher is better</option><option value="minimize">Lower is better</option></select>
-        </label>
-        <label class="field">Target value (optional)
-          <input id="analysis-target" name="target" type="number" placeholder="Desired value" step="any">
-        </label>
-        <label class="field">Minimum improvement (optional)
-          <input id="analysis-improvement" name="minimum_improvement" type="number" placeholder="0" min="0" step="any">
-        </label>
-        <label class="field">Guardrail metric (optional)
-          <input id="analysis-guardrail-metric" name="guardrail_metric" placeholder="e.g. recall or memory_mb" autocomplete="off" spellcheck="false">
-        </label>
-        <label class="field">Guardrail limit (optional)
-          <input id="analysis-guardrail-threshold" name="guardrail_threshold" type="number" placeholder="Threshold" step="any">
-        </label>
-        <label class="field">Guardrail rule
-          <select id="analysis-guardrail-operator" name="guardrail_operator"><option value="gte">At least</option><option value="lte">At most</option></select>
-        </label>
-        <button class="primary-button analysis-submit" id="analysis-submit" type="submit">Analyse repository <span>→</span></button>
+        <div id="goal-explanation" class="goal-explanation field-wide" aria-live="polite"></div>
+        <div id="custom-goal" class="field-wide custom-goal hidden">
+          <label class="field">Exact metric name
+            <input id="analysis-metric" name="metric" value="p95_latency_ms" required autocomplete="off" spellcheck="false">
+          </label>
+          <label class="field">Which change counts as improvement?
+            <select id="analysis-direction" name="direction" required><option value="">Choose for your metric</option><option value="maximize">Increase this number</option><option value="minimize" selected>Decrease this number</option></select>
+          </label>
+          <p class="help-text">Use the name your benchmark emits. Choose increase for scores like accuracy, or decrease for costs like elapsed time. This does not change the model; it changes how measured results are judged.</p>
+        </div>
+        <details class="field-wide advanced-options">
+          <summary>Add a target or correctness limit <span>optional</span></summary>
+          <div class="analysis-form">
+            <label class="field">Target value<input id="analysis-target" name="target" type="number" placeholder="e.g. 40 for 40 ms" step="any"></label>
+            <label class="field">Minimum improvement<input id="analysis-improvement" name="minimum_improvement" type="number" placeholder="Amount, not percentage" min="0" step="any"></label>
+            <p class="help-text field-wide">A target is the value you want to reach. Minimum improvement is an absolute difference: 50 ms to 40 ms is 10 ms; F1 of 0.70 to 0.75 is 0.05.</p>
+            <label class="field">Metric that must stay within a limit<input id="analysis-guardrail-metric" name="guardrail_metric" placeholder="e.g. error_rate" autocomplete="off" spellcheck="false"></label>
+            <label class="field">Limit<input id="analysis-guardrail-threshold" name="guardrail_threshold" type="number" placeholder="e.g. 0 for no errors" step="any"></label>
+            <label class="field">Rule<select id="analysis-guardrail-operator" name="guardrail_operator"><option value="gte">At least this value</option><option value="lte">At most this value</option></select></label>
+          </div>
+        </details>
+        <p id="provider-note" class="help-text field-wide">Preview reads selected source files and proposes experiments. It does not run tests or benchmarks.</p>
+        <button class="primary-button analysis-submit" id="analysis-submit" type="submit">Preview repository <span>→</span></button>
       </form>
       <p id="analysis-error" class="error-box hidden" role="alert"></p>
       <div id="analysis-output" class="analysis-output hidden" aria-live="polite">
@@ -70,19 +107,19 @@
     </section>
 
     <div class="workspace-grid">
-      <section class="panel setup" aria-labelledby="setup-title">
+      <section id="demo-panel" role="tabpanel" class="panel setup hidden" aria-labelledby="setup-title">
         <div class="section-heading"><span class="section-number">02</span><div><p class="kicker">CONTROLLED DEMOS</p><h2 id="setup-title">Choose a measured example</h2></div></div>
         <div class="adapter-options" role="radiogroup" aria-label="Demo project">
-          <label class="adapter-card selected"><input type="radio" name="adapter" value="ml-training" checked><span class="card-icon">◈</span><strong>ML training</strong><small>Hidden learning rate failure · validation F1</small></label>
-          <label class="adapter-card"><input type="radio" name="adapter" value="backend-benchmark"><span class="card-icon">▤</span><strong>Backend benchmark</strong><small>Slow response config · P95 latency</small></label>
+          <label class="adapter-card selected"><input type="radio" name="adapter" value="ml-training" checked><span class="card-icon">◈</span><strong>ML training</strong><small>Adjust a learning rate; compare validation F1. Higher is better.</small></label>
+          <label class="adapter-card"><input type="radio" name="adapter" value="backend-benchmark"><span class="card-icon">▤</span><strong>Backend benchmark</strong><small>Reduce a response delay; preserve the response. Lower latency is better.</small></label>
         </div>
-        <label class="adapter-card"><input type="radio" name="adapter" value="generic-process"><strong>General CLI benchmark</strong><small>Declared harness · Linux sandbox required</small></label>
+        <label class="adapter-card"><input type="radio" name="adapter" value="generic-process"><strong>General CLI benchmark</strong><small>Remove redundant work; preserve the answer. Requires Linux.</small></label>
         <div class="contract" id="contract"></div>
         <button class="primary-button" id="prepare-button" type="button">Inspect & prepare experiment <span>→</span></button>
         <p class="fine-print">Preparation inventories the repository and produces a reviewable plan. It does not run project code.</p>
       </section>
 
-      <section class="panel run-panel" aria-labelledby="run-title">
+      <section id="run-panel" class="panel run-panel hidden" aria-labelledby="run-title">
         <div class="section-heading"><span class="section-number">03</span><div><p class="kicker">RUN CONTROL</p><h2 id="run-title">Experiment timeline</h2></div></div>
         <div class="run-status"><span id="status-dot" class="status-dot idle"></span><strong id="status-label">Ready to prepare</strong><span id="run-id" class="run-id"></span></div>
         <ol class="timeline" id="timeline" aria-live="polite"></ol>
@@ -95,7 +132,7 @@
           <details><summary>Exact command, configuration, contract and approval scope</summary><pre id="plan-json"></pre></details>
           <p id="execution-readiness" class="fine-print"></p>
           <button class="approve-button" id="approve-button" type="button">Approve exact plan & start <span>→</span></button>
-          <p class="fine-print">Approval is bound to this plan fingerprint and can be used once.</p>
+          <p class="fine-print">Only this reviewed change will run, in separate baseline and candidate copies.</p>
         </div>
         <div id="error-box" class="error-box hidden" role="alert"></div>
       </section>
@@ -103,7 +140,7 @@
 
     <section class="panel results hidden" id="results" aria-labelledby="results-title">
       <div class="section-heading"><span class="section-number">04</span><div><p class="kicker">MEASURED OUTCOME</p><h2 id="results-title">Evidence & decision</h2></div><span id="decision-pill" class="decision-pill"></span></div>
-      <p class="decision-reason" id="decision-reason"></p>
+      <p class="decision-reason" id="decision-reason"></p><details class="advanced-options"><summary>What does this decision mean?</summary><p class="help-text">Accepted: the measured candidate meets the configured goal and checks. Rejected: a required check failed. Inconclusive: there is not enough reliable evidence to decide. A preview or model suggestion is never a measured result.</p></details>
       <div id="result-overview"></div>
       <h3>Baseline vs candidate</h3><p class="chart-legend">Blue: baseline · Teal: candidate · Direction comes from declarations</p>
       <div class="metric-grid" id="metrics"></div>

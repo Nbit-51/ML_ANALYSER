@@ -8,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 
 from ml_analyser import __version__
 from ml_analyser.api.router import api_router
+from ml_analyser.core.access import AccessMiddleware
 from ml_analyser.core.config import get_settings
 
 
@@ -19,6 +20,7 @@ def create_app() -> FastAPI:
         version=__version__,
         description="API for the evidence-driven ML Analyser agent.",
     )
+    application.add_middleware(AccessMiddleware)
     application.include_router(api_router, prefix=settings.api_v1_prefix)
     frontend_root = Path(__file__).resolve().parents[2] / "frontend"
     if frontend_root.is_dir():
@@ -28,7 +30,15 @@ def create_app() -> FastAPI:
         async def demo_app() -> FileResponse:
             return FileResponse(frontend_root / "index.html")
 
-    @application.get("/", tags=["service"])
+        @application.get("/", include_in_schema=False)
+        async def landing() -> FileResponse:
+            return FileResponse(frontend_root / "landing.html")
+
+        @application.get("/login", include_in_schema=False)
+        async def login_page() -> FileResponse:
+            return FileResponse(frontend_root / "login.html")
+
+    @application.get("/status", tags=["service"])
     async def service_root() -> dict[str, str]:
         return {
             "name": settings.app_name,

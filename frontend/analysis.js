@@ -10,11 +10,16 @@ function analysisNode(tag, text, className = "") {
 function analysisCard(title, body, details) {
   const card = analysisNode("article", "", "analysis-card");
   card.append(analysisNode("h4", title), analysisNode("p", body));
-  if (details) card.append(analysisNode("small", details));
+  if (details) {
+    const more = document.createElement("details");
+    more.append(analysisNode("summary", "Evidence and test conditions"), analysisNode("p", details));
+    card.append(more);
+  }
   return card;
 }
 
 function renderRepositoryPreview(result) {
+  const selectedPath = analysisElement("analysis-path").value.trim();
   analysisElement("analysis-output").classList.remove("hidden");
   analysisElement("analysis-status").textContent = `${result.project_id} · ${result.inventory.total_files} files inventoried`;
   analysisElement("analysis-provider").textContent = result.provider;
@@ -35,6 +40,13 @@ function renderRepositoryPreview(result) {
 
   renderOverview(result.repository_summary, analysisElement("repository-overview"));
   const adapterControls = analysisNode("div");
+  if (!result.repository_summary.adapters.some(a => a.status === "supported_and_executable")) {
+    adapterControls.append(analysisNode("p", "Preview complete. To measure this project, add a supported benchmark manifest and its dependencies. Detected languages alone do not define which tests to run.", "goal-explanation"));
+    const guide = analysisNode("a", "Read the benchmark setup guide →");
+    guide.href = "https://github.com/Nbit-51/ML_ANALYSER/blob/main/docs/GENERIC_BENCHMARKS.md";
+    guide.target = "_blank"; guide.rel = "noreferrer";
+    adapterControls.append(guide);
+  }
   for (const adapter of result.repository_summary.adapters) {
     if (adapter.status !== "supported_and_executable") continue;
     const button = analysisNode("button", `Prepare ${adapter.adapter} experiment`, "primary-button");
@@ -43,7 +55,7 @@ function renderRepositoryPreview(result) {
       button.disabled = true;
       try {
         prepared = await api("/prepare", "POST", {
-          adapter: adapter.adapter, project_path: analysisElement("analysis-path").value.trim(),
+          adapter: adapter.adapter, project_path: selectedPath,
           success_contract: result.success_contract,
         });
         renderPlan();
@@ -125,6 +137,13 @@ analysisElement("analysis-form").addEventListener("submit", async (event) => {
   analysisElement("analysis-output").classList.add("hidden");
 
   const path = analysisElement("analysis-path").value.trim();
+  if (!path) {
+    errorBox.textContent = "Import a repository or choose a folder first.";
+    errorBox.classList.remove("hidden");
+    button.disabled = false;
+    button.firstChild.textContent = "Preview repository ";
+    return;
+  }
   const metric = analysisElement("analysis-metric").value.trim();
   const target = analysisElement("analysis-target").value.trim();
   const improvement = analysisElement("analysis-improvement").value.trim();
@@ -134,7 +153,7 @@ analysisElement("analysis-form").addEventListener("submit", async (event) => {
     errorBox.textContent = "Enter both a guardrail metric and its limit, or leave both blank.";
     errorBox.classList.remove("hidden");
     button.disabled = false;
-    button.firstChild.textContent = "Analyse repository ";
+    button.firstChild.textContent = "Preview repository ";
     return;
   }
   const objective = {
@@ -154,15 +173,17 @@ analysisElement("analysis-form").addEventListener("submit", async (event) => {
       body: JSON.stringify({ project_path: path, success_contract: { objective, constraints } }),
     });
     const result = await response.json();
+    if (response.status === 401) { window.location.assign("/login"); return; }
     if (!response.ok) {
       throw new Error(typeof result.detail === "string" ? result.detail : `Analysis failed (${response.status})`);
     }
+    if (analysisElement("analysis-path").value.trim() !== path || analysisElement("analysis-metric").value.trim() !== metric) return;
     renderRepositoryPreview(result);
   } catch (error) {
     errorBox.textContent = error.message;
     errorBox.classList.remove("hidden");
   } finally {
     button.disabled = false;
-    button.firstChild.textContent = "Analyse repository ";
+    button.firstChild.textContent = "Preview repository ";
   }
 });

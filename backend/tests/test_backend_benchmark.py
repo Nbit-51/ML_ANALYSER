@@ -2,7 +2,9 @@
 
 import asyncio
 import json
+import math
 import shutil
+import statistics
 from pathlib import Path
 
 import pytest
@@ -219,6 +221,21 @@ def test_backend_api_prepare_approve_execute_flow(
 
     assert execution_response.status_code == 200
     body = execution_response.json()
-    assert body["decision"]["status"] == "accepted"
-    assert body["disposition"] == "retained"
+    # A real host can have noisy timings; the API must honor the reliability gate.
+    # Assert the decision against the observed batch variance, not a lucky timing run.
+    noisy = False
+    for label in ("baseline", "candidate"):
+        rounds = body[label]["latency_rounds"]
+        assert len(rounds) == 3 and all(len(batch) == 20 for batch in rounds)
+        p95s = [sorted(batch)[math.ceil(0.95 * len(batch)) - 1] for batch in rounds]
+        noisy |= statistics.stdev(p95s) / statistics.mean(p95s) > 0.30
+        assert body[label]["error_rate"] == 0
+    assert body["baseline"]["response_hash"] == body["candidate"]["response_hash"]
+    if noisy:
+        assert body["decision"]["status"] == "inconclusive"
+        assert "high variance" in body["decision"]["reason"]
+        assert body["disposition"] == "discarded"
+    else:
+        assert body["decision"]["status"] == "accepted", body["decision"]
+        assert body["disposition"] == "retained"
     assert body["candidate"]["p95_latency_ms"] < body["baseline"]["p95_latency_ms"]

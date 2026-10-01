@@ -67,11 +67,15 @@ python -m pip install -e ".[dev]"
 python -m uvicorn ml_analyser.main:app --app-dir backend --reload
 ```
 
-Open [the workbench](http://127.0.0.1:8000/app) or [API docs](http://127.0.0.1:8000/docs). The mock provider works without an API key.
+Open [the landing page](http://127.0.0.1:8000/) or [the workbench](http://127.0.0.1:8000/app). [API docs](http://127.0.0.1:8000/docs). The mock provider works without an API key.
 
 To enable live reasoning, copy [.env.example](.env.example) to `.env` **only if `.env` does not already exist**. Set `ML_ANALYSER_MODEL_PROVIDER=nebius`, your `NEBIUS_API_KEY`, and `NEBIUS_MODEL=nvidia/nemotron-3-super-120b-a12b`. Use the `NEBIUS_BASE_URL` for your Nebius region; the demonstrated configuration uses `https://api.tokenfactory.us-central1.nebius.com/v1`. Keep credentials local; `.env` is ignored. Live reasoning sends selected repository excerpts to Nebius.
 
-Start with the ML or HTTP demo in the workbench: set the contract, prepare and approve the plan, then inspect the measured comparison and evidence. Repositories for preview belong under `workspaces/` by default.
+Choose **My repository** to import a public GitHub URL or select a folder anywhere on your computer. Imports create managed source copies; originals stay unchanged. Local clones from other Git hosts work through folder import. Limits: 1,000 files, 2 MB per file and 20 MB total. Importing enables preview; execution still needs a supported manifest.
+
+Choose **Try a guided demo** for an immediately runnable ML or HTTP example. Goal presets explain what better means, while optional targets and correctness limits stay out of the way until needed.
+
+**GitHub sign-in:** `/login` explains the one-time OAuth setup. Add the client ID, client secret and allowed GitHub logins to your ignored `.env`; restart to enable sign-in and account-scoped workspaces. With OAuth unconfigured, local demo mode remains available. See [setup, metric explanations and import limits](docs/ONBOARDING.md).
 
 ## Supported benchmarks
 
@@ -92,14 +96,14 @@ python -m ruff check .
 python -m ruff format --check backend
 python -m mypy backend/ml_analyser
 python -m pytest --cov=ml_analyser --cov-report=term-missing --cov-fail-under=90
-node --test frontend/metrics.test.js frontend/analytics.test.js
+node --test frontend/metrics.test.js frontend/analytics.test.js frontend/onboarding.test.js
 ```
 
 Latest local validation: **107 Linux tests passed, 92.88% coverage; 10 frontend tests passed.** See [commands, results and file inventory](docs/IMPLEMENTATION_VALIDATION.md). CI also checks JavaScript syntax.
 
 ## Boundaries
 
-Execution requires fingerprint-bound, single-use approval. Generic execution denies external network access and enforces bounded commands, outputs and per-process resources. Legacy ML/HTTP runners are for trusted local code. Keep the unauthenticated API on localhost.
+Execution requires fingerprint-bound, single-use approval. Generic execution denies external network access and enforces bounded commands, outputs and per-process resources. Legacy ML/HTTP runners are for trusted local code. Keep demo mode on localhost. GitHub sign-in restricts access to configured accounts; it does not turn trusted script execution into a hostile-code service.
 
 This is a hackathon prototype: HTTP is sequential, ML training is not repeated, aggregate CPU/GPU/cost accounting is unavailable, and reliability rules do not establish statistical significance. Production workers, recovery and broader native ecosystem integrations remain future work.
 

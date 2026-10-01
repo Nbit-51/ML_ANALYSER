@@ -40,7 +40,7 @@ from ml_analyser.agent.providers import (
     ProviderResponseError,
     build_model_provider,
 )
-from ml_analyser.core.config import get_settings
+from ml_analyser.core.config import get_request_settings as get_settings
 from ml_analyser.core.workspace import InvalidWorkspacePath, resolve_project_path
 from ml_analyser.execution import IsolatedWorkspaceManager
 from ml_analyser.execution.workspace import WorkspaceIsolationError

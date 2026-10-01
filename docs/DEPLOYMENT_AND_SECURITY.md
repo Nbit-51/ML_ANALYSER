@@ -25,11 +25,11 @@ CI uses Ubuntu 24.04 and a root-owned copy of bubblewrap at `/usr/local/libexec/
 - Put Token Factory credentials in ignored `.env` or a managed secret store; never in manifests, fixtures, logs, or reports.
 - Restrict access to SQLite state and retained workspaces; they may contain repository data and measured outputs.
 - The provider sends selected inventory metadata, success contracts, and evidence to the configured endpoint. Review data sensitivity before switching from mock to live inference.
-- The browser workbench uses text nodes for dynamic content. The API currently has no authentication; bind it to localhost and do not expose it publicly as-is.
+- The browser workbench uses text nodes for dynamic content. GitHub OAuth is optional; unconfigured local demo mode has no authentication. Bind demo mode to localhost. Configured sign-in restricts access to allowed accounts and scopes run data per account; it does not replace hardened execution.
 
 ## Operational checks before a shared deployment
 
-1. Add authentication and project-level authorization for approvals, run reads, artifacts, and retained candidates.
+1. Configure GitHub OAuth, an explicit account allowlist and HTTPS. Review per-account data isolation and add quotas/rate limits; do not expose anonymous demo mode.
 2. Move legacy runners behind OS/container isolation; review the generic sandbox boundary and add aggregate quotas before shared hostile-code execution.
 3. Move background execution to a durable queue and define recovery behavior for interrupted runs.
 4. Record structured run/experiment IDs, durations, provider errors, actual usage, and terminal states; redact secrets and sensitive repository content.
@@ -37,3 +37,5 @@ CI uses Ubuntu 24.04 and a root-owned copy of bubblewrap at `/usr/local/libexec/
 6. Run the full CI suite and the read-only `scripts/validate_nebius.py` smoke test with a current Nemotron model before any live demonstration.
 
 The current implementation is intentionally candid about these limits. It does not claim to be a production multi-tenant code-execution service.
+
+See [Onboarding and GitHub sign-in](ONBOARDING.md) for import limits, OAuth configuration, session boundaries and account storage.

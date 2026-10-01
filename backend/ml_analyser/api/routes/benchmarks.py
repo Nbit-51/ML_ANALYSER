@@ -25,7 +25,7 @@ from ml_analyser.agent.models import (
 )
 from ml_analyser.agent.process_benchmark import ProcessPlan
 from ml_analyser.agent.providers import build_model_provider
-from ml_analyser.core.config import get_settings
+from ml_analyser.core.config import get_request_settings as get_settings
 from ml_analyser.core.workspace import resolve_project_path
 from ml_analyser.execution.workspace import IsolatedWorkspaceManager
 from ml_analyser.persistence.sqlite import InvalidApprovalTransitionError, SQLiteRunStore

@@ -1,0 +1,20 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>ML Analyser · Evidence before acceptance</title><link rel="stylesheet" href="/static/styles.css"><script src="/static/session.js" defer></script></head><body><header class="topbar"><a class="brand" href="/"><span class="brand-mark">M</span><span>ML Analyser</span></a><nav class="account-nav"><a href="/app">Workbench</a><span id="session-label"></span><a id="sign-in-link" href="/login">Sign in</a><button id="logout-button" class="text-button hidden" type="button">Sign out</button></nav></header>
+<main class="login-main"><section class="login-card panel">
+  <div class="eyebrow">YOUR EXPERIMENT WORKSPACE</div><h1>Welcome back.</h1>
+  <p>Sign in with GitHub to access your imported repositories and saved experiments.</p>
+  <p id="login-status" role="status">Checking sign-in availability…</p>
+  <a id="github-login" class="primary-button hidden" href="/api/v1/auth/github">Continue with GitHub <span>→</span></a>
+  <div id="oauth-setup" class="hidden setup-guide">
+    <h2>Connect your GitHub OAuth app</h2>
+    <ol><li>Create an OAuth app in <a href="https://github.com/settings/developers" target="_blank" rel="noreferrer">GitHub Developer settings</a>.</li>
+      <li>Set its homepage to this app's origin and its callback to:<code id="callback-url"></code></li>
+      <li>Add these settings to your local <code>.env</code>, then restart the server:</li></ol>
+    <pre>ML_ANALYSER_APP_URL=http://127.0.0.1:8000
+ML_ANALYSER_GITHUB_CLIENT_ID=your-client-id
+ML_ANALYSER_GITHUB_CLIENT_SECRET=your-client-secret
+ML_ANALYSER_GITHUB_ALLOWED_USERS=your-github-login</pre>
+    <p class="help-text">Keep the secret in .env. Only listed accounts may sign in. GitHub sign-in requests public identity only; it does not grant access to private repositories. Use HTTPS when serving beyond localhost.</p>
+  </div>
+  <a id="demo-login" class="secondary-button hidden" href="/app?mode=demo">Continue in local demo mode</a>
+  <a class="back-link" href="/">← Back to overview</a>
+</section></main></body></html>

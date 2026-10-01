@@ -72,3 +72,9 @@ Legacy `/ml-training/*`, `/backend-benchmark/*` and `/ml-threshold-demo` endpoin
 CI enforces Ruff lint/format, strict mypy, backend coverage >=90%, JavaScript syntax checks and frontend transformation tests. Linux integration tests execute actual CLI, test, build and microbenchmark profiles and validate network/write denial, timeout and output bounds. Other tests cover custom ML metrics, HTTP results, approval replay/tampering, source changes, malformed/duplicate/nonfinite output, reliability and source isolation.
 
 This remains a local hackathon prototype. Native C/C++/Node/Go/Rust/Java-specific benchmark integrations, agent evaluation, frontend browser benchmarks, HTTP concurrency, statistical testing, aggregate accounting, production workers and automatic source promotion are not implemented.
+
+## Repository intake and account boundary
+
+`/` serves the landing page, `/login` hosts GitHub sign-in/setup and `/app` hosts the guided workbench. `/status` preserves service metadata. Repository intake accepts a public GitHub default-branch archive or browser-selected directory files, validates bounded paths/content, filters credential-like files and copies source into the managed workspace. It never executes Git hooks or project code.
+
+Optional GitHub OAuth uses PKCE and single-use browser-bound state. Allowed accounts receive opaque revocable sessions and per-account workspace/execution/database settings via request context. Background run tasks inherit that context. Configuring credentials gates workbench and experiment APIs; missing credentials retain the local demo mode. The origin/host and bounded-body middleware also applies without authentication. [Onboarding documentation](ONBOARDING.md) describes setup and remaining deployment limits.

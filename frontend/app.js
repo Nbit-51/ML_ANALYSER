@@ -34,14 +34,14 @@ const STAGES = [
 const LABELS = {
   ingesting: "Inventory repository",
   diagnosing: "Inspect project state",
-  hypothesizing: "Form falsifiable hypothesis",
-  designing: "Compile controlled experiment",
-  selecting: "Select candidate",
-  awaiting_approval: "Await exact scope approval",
-  executing: "Run isolated baseline & candidate",
+  hypothesizing: "Propose a testable explanation",
+  designing: "Prepare the experiment plan",
+  selecting: "Select the candidate change",
+  awaiting_approval: "Wait for your approval",
+  executing: "Run original and changed copies",
   measuring: "Capture measurements",
-  deciding: "Check objective & guardrails",
-  reporting: "Persist evidence & report",
+  deciding: "Check the goal and correctness limits",
+  reporting: "Save evidence and report",
   completed: "Run complete",
   failed: "Run failed",
 };
@@ -77,7 +77,7 @@ function renderContract() {
   contract.replaceChildren(element("div", "SUCCESS CONTRACT", "contract-title"));
   const rows = [
     ["Objective", `${demo.heading} ${demo.objective.direction === "maximize" ? "≥" : "≤"} ${demo.objective.target}`],
-    ["Minimum improvement", `${demo.objective.minimum_improvement} ${demo.objective.metric === "p95_latency_ms" ? "ms" : "points"}`],
+    ["Minimum improvement", `${demo.objective.minimum_improvement} ${demo.objective.metric === "p95_latency_ms" ? "ms" : demo.objective.metric === "work_units" ? "operations" : "score points"}`],
     ...demo.constraints.map((item) => [item.metric, `${{gte:"≥",lte:"≤",eq:"="}[item.operator]} ${item.threshold}`]),
     ["Budget", `≤ ${demo.budget.max_wall_clock_seconds}s · ${demo.budget.max_experiments} experiment`],
   ];
@@ -101,6 +101,7 @@ function renderTimeline(events = []) {
 }
 
 function renderPlan() {
+  $("run-panel").classList.remove("hidden");
   const plan = prepared.plan;
   $("plan-review").classList.remove("hidden");
   $("plan-title").textContent = plan.experiment.title;
@@ -115,6 +116,7 @@ function renderPlan() {
   $("execution-readiness").textContent = readiness ? `${readiness.status.replaceAll("_", " ").toUpperCase()} · ${readiness.reason}` : "Review execution requirements";
   if (prepared.repository_summary) renderOverview(prepared.repository_summary, $("result-overview"));
   renderTimeline(["ingesting", "diagnosing", "hypothesizing", "designing", "selecting", "awaiting_approval"]);
+  $("run-panel").scrollIntoView({behavior:"smooth", block:"start"});
 }
 
 async function api(path, method = "GET", body = undefined) {
@@ -124,12 +126,14 @@ async function api(path, method = "GET", body = undefined) {
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   const payload = await response.json();
+  if (response.status === 401) { window.location.assign("/login"); throw new Error("Sign in to continue."); }
   if (!response.ok) throw new Error(typeof payload.detail === "string" ? payload.detail : `Request failed (${response.status})`);
   return payload;
 }
 
 async function prepare() {
   clearError();
+  $("run-panel").classList.remove("hidden");
   $("prepare-button").disabled = true;
   setStatus("active", "Inspecting project");
   const demo = DEMOS[selected];
@@ -179,6 +183,7 @@ function formatMetric(value, metric) {
 }
 
 function renderResult(result) {
+  $("run-panel").classList.remove("hidden");
   $("results").classList.remove("hidden");
   const decision = result.decision.status;
   $("decision-pill").className = `decision-pill ${decision}`;
