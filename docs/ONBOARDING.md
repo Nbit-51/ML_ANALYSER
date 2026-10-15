@@ -47,3 +47,13 @@ Configuring either client credential enables the authentication boundary immedia
 Authenticated users receive separate workspace, execution and run-database paths under `artifacts/accounts/<github-id>/`. Included demos are copied on first sign-in. Reports and approvals resolve within the requesting user's database; one user cannot address another user's imports or run IDs through the API. Existing anonymous runs remain in the original local workspace and are not migrated automatically. Active experiments may finish after sign-out; sign-out revokes access rather than cancelling workers.
 
 Cross-origin write requests and unexpected Host headers are denied. Upload bodies are bounded before JSON parsing. This remains a trusted, local-first prototype: authentication does not make legacy ML/HTTP execution safe for hostile code. Shared production deployment still needs hardened workers, quotas/rate limits, HTTPS, operational recovery and security review.
+
+## Reopen projects and measured reports
+
+The project selector lists managed workspace folders and imported source copies. New imports retain a friendly name, origin and import time in the account's SQLite database. Existing copies remain discoverable by folder name. Missing or symlinked project directories are not listed. The UI lists at most 100 folders; manually entered managed paths remain available for other projects.
+
+Selecting a project calls the read-only `/api/v1/repositories/details` endpoint. Valid manifests contribute typed metric definitions, units and declared directions; the HTTP adapter supplies its known definitions. A custom metric with no declared direction requires an explicit choice. Invalid manifests do not offer executable goals. Reading these settings runs neither project code nor model reasoning.
+
+`/api/v1/runs/history` lists the latest 20 normalized, completed reports from persisted evidence. **Open report** loads its stored measurements, and **Download report JSON** exports the displayed report. Preview-only runs and legacy endpoints that did not produce normalized reports are not included. Older normalized snapshots missing the lineage graph reconstruct it from their stored experiments and measurements; their evidence records remain unchanged. Libraries and report history use the same per-account storage boundary as execution.
+
+Approval fingerprints normalize equivalent whole JSON numbers, such as `0.0` and `0`, so browser serialization does not invalidate the reviewed scope. Booleans, strings and changed numeric values remain distinct, and source bytes remain separately fingerprinted.

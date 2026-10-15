@@ -7,7 +7,12 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from ml_analyser.agent.models import AdapterReadiness, Measurement
+from ml_analyser.agent.models import (
+    AdapterReadiness,
+    Measurement,
+    MetricDefinition,
+    MetricDirection,
+)
 from ml_analyser.tools.repository import RepositoryInventoryTool
 
 
@@ -24,6 +29,7 @@ class AdapterRegistration:
     available: Callable[[], bool] = lambda: True
     languages: tuple[str, ...] = ()
     supported_metrics: tuple[str, ...] = ()
+    measurement_definitions: tuple[MetricDefinition, ...] = ()
 
 
 class AdapterRegistry:
@@ -47,6 +53,7 @@ class AdapterRegistry:
             status = "detected_but_needs_configuration"
             reason = f"Requires {entry.manifest_name}. {entry.requirements}"
             metrics = list(entry.supported_metrics)
+            definitions = list(entry.measurement_definitions)
             if entry.languages and not languages.intersection(entry.languages):
                 status = "unsupported"
                 reason = "No compatible source language detected. " + reason
@@ -54,6 +61,7 @@ class AdapterRegistry:
                 try:
                     manifest = entry.load_manifest(root)
                     if hasattr(manifest, "metric_definitions"):
+                        definitions = list(manifest.metric_definitions)
                         metrics = [definition.name for definition in manifest.metric_definitions]
                     status = "supported_and_executable" if entry.available() else "preview_only"
                     reason = entry.requirements + "; explicit approval required"
@@ -68,6 +76,10 @@ class AdapterRegistry:
                     profiles=list(entry.profiles),
                     required_configuration=entry.manifest_name,
                     supported_measurements=metrics,
+                    measurement_definitions=definitions
+                    if (root / entry.manifest_name).is_file()
+                    and status in {"supported_and_executable", "preview_only"}
+                    else [],
                 )
             )
         return readiness
@@ -109,6 +121,17 @@ def default_registry() -> AdapterRegistry:
             http_measurements,
             languages=("python",),
             supported_metrics=tuple(sorted(BackendHttpBenchmarkAdapter.supported_metrics)),
+            measurement_definitions=tuple(
+                MetricDefinition(name=name, unit=unit, direction=MetricDirection(direction))
+                for name, unit, direction in (
+                    ("p50_latency_ms", "ms", "minimize"),
+                    ("p95_latency_ms", "ms", "minimize"),
+                    ("p99_latency_ms", "ms", "minimize"),
+                    ("mean_latency_ms", "ms", "minimize"),
+                    ("throughput_requests_per_second", "requests/s", "maximize"),
+                    ("error_rate", "ratio", "minimize"),
+                )
+            ),
         )
     )
     registry.register(

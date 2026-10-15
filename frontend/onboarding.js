@@ -26,14 +26,36 @@ function selectSourceFiles(files) {
   return kept;
 }
 
-if (typeof module !== "undefined") module.exports = { GOALS, sourceFileAllowed, selectSourceFiles };
+function declaredGoals(adapters) {
+  return adapters.filter(adapter => ["supported_and_executable", "preview_only"].includes(adapter.status))
+    .flatMap(adapter => (adapter.measurement_definitions || []).map(definition => ({
+      metric: definition.name, direction: definition.direction || null, unit: definition.unit || null,
+      label: definition.label || definition.name.replaceAll("_", " "), adapter: adapter.adapter,
+    })));
+}
+
+function readinessMessage(adapters) {
+  if (adapters.some(adapter => adapter.status === "supported_and_executable")) {
+    return "Ready to prepare a declared experiment. Preview first, review the plan, then approve it.";
+  }
+  if (adapters.some(adapter => adapter.status === "preview_only")) {
+    return "Ready for preview. A benchmark is declared, but this host cannot execute it; check its runtime requirements.";
+  }
+  return "Ready for preview. To measure a change, add a benchmark manifest that declares the command, metrics and candidate configuration.";
+}
+
+if (typeof module !== "undefined") module.exports = { GOALS, sourceFileAllowed, selectSourceFiles, declaredGoals, readinessMessage };
 
 if (typeof document !== "undefined") {
   const byId = id => document.getElementById(id);
   let chosen = [];
+  let projectGoals = [];
+  let selectionVersion = 0;
+  const presetOptions = Array.from(byId("goal-preset").options).map(option => ({value:option.value, text:option.textContent}));
   const invalidate = () => {
     byId("analysis-output").classList.add("hidden");
     byId("plan-review").classList.add("hidden");
+    byId("results").classList.add("hidden");
     prepared = null;
   };
   function switchMode(mode) {
@@ -47,12 +69,17 @@ if (typeof document !== "undefined") {
   if (new URLSearchParams(location.search).get("mode") === "demo") switchMode("demo");
   function updateGoal() {
     invalidate();
-    const goal = GOALS[byId("goal-preset").value];
-    byId("custom-goal").classList.toggle("hidden", Boolean(goal));
+    const value = byId("goal-preset").value;
+    const declaration = value.startsWith("declared-") ? projectGoals[Number(value.slice(9))] : null;
+    const goal = declaration || GOALS[value];
+    byId("custom-goal").classList.toggle("hidden", Boolean(goal?.direction));
+    byId("analysis-metric").readOnly = Boolean(declaration);
     if (goal) {
       byId("analysis-metric").value = goal.metric;
-      byId("analysis-direction").value = goal.direction;
-      byId("goal-explanation").textContent = `${goal.title}. ${goal.example} ${goal.detail} Metric: ${goal.metric}.`;
+      byId("analysis-direction").value = goal.direction || "";
+      byId("goal-explanation").textContent = declaration
+        ? `${goal.label} is declared by ${goal.adapter}${goal.unit ? ` in ${goal.unit}` : ""}. ${goal.direction === "minimize" ? "A smaller value counts as improvement." : goal.direction === "maximize" ? "A larger value counts as improvement." : "The manifest does not define improvement direction. Choose it below."} This is a metric definition, not a measured value.`
+        : `${goal.title}. ${goal.example} ${goal.detail} Metric: ${goal.metric}.`;
     } else {
       byId("analysis-metric").value = "";
       byId("analysis-direction").value = "";
@@ -63,8 +90,98 @@ if (typeof document !== "undefined") {
   }
   byId("goal-preset").addEventListener("change", updateGoal);
   byId("analysis-path").addEventListener("input", invalidate);
+  byId("analysis-form").addEventListener("input", invalidate);
+  byId("analysis-form").addEventListener("change", invalidate);
   updateGoal();
   const fail = message => { byId("import-error").textContent = message; byId("import-error").classList.remove("hidden"); };
+  async function repositoryApi(path, options) {
+    const response = await fetch(`/api/v1/repositories${path}`, options);
+    const data = await response.json();
+    if (response.status === 401) { location.assign("/login"); throw new Error("Sign in to continue."); }
+    if (!response.ok) throw new Error(typeof data.detail === "string" ? data.detail : "Could not load the project.");
+    return data;
+  }
+  function renderGoals(adapters) {
+    projectGoals = declaredGoals(adapters);
+    const select = byId("goal-preset");
+    select.replaceChildren();
+    if (projectGoals.length) {
+      const group = document.createElement("optgroup");
+      group.label = "Declared by this project";
+      projectGoals.forEach((goal, index) => {
+        const option = document.createElement("option");
+        option.value = `declared-${index}`;
+        option.textContent = `${goal.label}${goal.unit ? ` (${goal.unit})` : ""} · ${goal.adapter}`;
+        group.append(option);
+      });
+      select.append(group);
+    }
+    const group = document.createElement("optgroup"); group.label = "Other goals for preview";
+    for (const {value, text} of presetOptions) {
+      const option = document.createElement("option"); option.value = value; option.textContent = text;
+      group.append(option);
+    }
+    select.append(group);
+    updateGoal();
+  }
+  async function inspectProject(path) {
+    const version = ++selectionVersion;
+    invalidate();
+    byId("analysis-path").value = path;
+    byId("project-readiness").classList.add("hidden");
+    // Clear old declarations immediately; a failed load must not reuse another project's metrics.
+    renderGoals([]);
+    if (!path) { sessionStorage.removeItem("ml-analyser-project"); return; }
+    sessionStorage.setItem("ml-analyser-project", path);
+    byId("import-status").textContent = "Reading declared benchmark settings…";
+    try {
+      const data = await repositoryApi(`/details?project_path=${encodeURIComponent(path)}`);
+      if (version !== selectionVersion) return;
+      renderGoals(data.adapters);
+      const box = byId("project-readiness");
+      box.replaceChildren(); box.classList.remove("hidden");
+      const message = document.createElement("p"); message.className = "goal-explanation";
+      message.textContent = readinessMessage(data.adapters); box.append(message);
+      const more = document.createElement("details");
+      const title = document.createElement("summary"); title.textContent = "Benchmark requirements";
+      more.append(title);
+      for (const adapter of data.adapters) {
+        const line = document.createElement("p"); line.className = "help-text";
+        line.textContent = `${adapter.adapter}: ${adapter.reason}`; more.append(line);
+      }
+      box.append(more);
+      byId("import-status").textContent = "Project selected. Choose a goal below, then preview the repository.";
+    } catch (error) { if (version === selectionVersion) { fail(error.message); byId("import-status").textContent = "Project details unavailable. Check the selected folder."; } }
+  }
+  async function refreshProjects(selectPath = null) {
+    byId("refresh-projects").disabled = true;
+    try {
+      const projects = await repositoryApi("");
+      const select = byId("saved-project"); select.replaceChildren();
+      const placeholder = document.createElement("option"); placeholder.value = ""; placeholder.textContent = "Choose a project…"; select.append(placeholder);
+      for (const project of projects) {
+        const option = document.createElement("option"); option.value = project.project_path;
+        option.textContent = `${project.display_name} · ${project.origin}${project.imported_at ? ` · ${new Date(project.imported_at).toLocaleDateString()}` : ""}`;
+        select.append(option);
+      }
+      byId("library-status").textContent = projects.length ? `${projects.length} projects in your workspace. Select one to continue.` : "No saved projects yet. Import a repository below.";
+      const previous = selectPath || byId("analysis-path").value || sessionStorage.getItem("ml-analyser-project");
+      if (projects.some(project => project.project_path === previous)) {
+        select.value = previous;
+        if (selectPath || !byId("analysis-path").value) await inspectProject(previous);
+        byId("new-project-options").open = false;
+      }
+    } catch (error) { byId("library-status").textContent = error.message; }
+    finally { byId("refresh-projects").disabled = false; }
+  }
+  byId("saved-project").addEventListener("change", event => {
+    byId("import-error").classList.add("hidden");
+    inspectProject(event.target.value);
+    byId("new-project-options").open = !event.target.value;
+  });
+  byId("refresh-projects").addEventListener("click", () => refreshProjects());
+  byId("analysis-path").addEventListener("change", event => inspectProject(event.target.value.trim()));
+  refreshProjects();
   async function importFiles(kind, payload, label) {
     byId("import-error").classList.add("hidden");
     byId("import-status").textContent = "Importing source files…";
@@ -76,7 +193,8 @@ if (typeof document !== "undefined") {
       if (!response.ok) throw new Error(typeof data.detail === "string" ? data.detail : "Import could not be completed. Check the file limits.");
       invalidate();
       byId("analysis-path").value = data.project_path;
-      byId("import-status").textContent = `${label} · ${data.files} files ready for preview. ${data.skipped ? `${data.skipped} excluded.` : ""} Original unchanged.`;
+      await refreshProjects(data.project_path);
+      byId("import-status").textContent = `${data.display_name || label} · ${data.files} files ready for preview. ${data.skipped ? `${data.skipped} excluded.` : ""} Original unchanged.`;
     } catch (error) { fail(error.message); byId("import-status").textContent = "Import not completed. Your previous selection is unchanged."; }
     finally { byId("github-import-button").disabled = byId("folder-import-button").disabled = false; }
   }
@@ -98,8 +216,9 @@ if (typeof document !== "undefined") {
   byId("folder-import-button").addEventListener("click", async () => {
     byId("folder-import-button").disabled = true;
     try {
+      const selection = chosen.slice();
       const files = [];
-      for (const file of chosen) {
+      for (const file of selection) {
         const content = await new Promise((resolve, reject) => {
           const reader = new FileReader();
           reader.onload = () => resolve(String(reader.result).split(",")[1]);
@@ -108,7 +227,8 @@ if (typeof document !== "undefined") {
         });
         files.push({ path: file.webkitRelativePath.split("/").slice(1).join("/"), content });
       }
-      await importFiles("folder", { files }, chosen[0].webkitRelativePath.split("/")[0]);
+      const display_name = selection[0].webkitRelativePath.split("/")[0].slice(0,120);
+      await importFiles("folder", { files, display_name }, display_name);
     } catch (error) { fail(error.message); }
     finally { byId("folder-import-button").disabled = false; }
   });

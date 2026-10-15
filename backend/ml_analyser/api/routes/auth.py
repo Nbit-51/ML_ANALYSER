@@ -19,6 +19,9 @@ router = APIRouter(prefix="/auth", tags=["authentication"])
 def auth_status(request: Request) -> dict[str, object]:
     settings = get_settings()
     user = AuthStore(settings.auth_database).user(request.cookies.get("ml_session", ""))
+    allowed = {item.strip().casefold() for item in settings.github_allowed_users.split(",")}
+    if not settings.auth_ready or not user or user["login"].casefold() not in allowed:
+        user = None
     return {
         "enabled": settings.auth_enabled,
         "configured": settings.auth_ready,

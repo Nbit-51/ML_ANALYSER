@@ -1,0 +1,12 @@
+{
+  "name": "ml-analyser-landing",
+  "private": true,
+  "scripts": {
+    "vendor:landing": "node scripts/vendor-landing.cjs",
+    "test:frontend": "node --test frontend/*.test.js"
+  },
+  "dependencies": {
+    "gsap": "3.13.0",
+    "three": "0.180.0"
+  }
+}

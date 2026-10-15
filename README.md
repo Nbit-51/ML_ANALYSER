@@ -10,6 +10,12 @@ Set a goal such as **lower validation RMSE** or **reduce P95 latency without cha
 
 **Nemotron reasons. Adapters measure. Deterministic rules decide.**
 
+## Explore the experiment engine
+
+The landing page uses a procedural Three.js graph to explain the experiment lifecycle: repository evidence, hypothesis, approval, baseline/candidate measurement and persisted decisions. Select nodes, explore outcome scenarios and compare explicitly labeled fixture reference values. The live workbench stays at `/app`.
+
+The page includes mobile layouts, a motion pause control, reduced-motion support and a static fallback when WebGL2 is unavailable. Three.js and GSAP are pinned and served locally; normal app startup requires no frontend build. To reproduce the vendor assets, run `npm ci --ignore-scripts` followed by `npm run vendor:landing`. See [the visual system and storyboard](docs/VISUAL_SYSTEM.md).
+
 ## The model and its role
 
 Our live reasoning configuration uses **NVIDIA Nemotron 3 Super 120B-A12B**, served through **Nebius Token Factory** as `nvidia/nemotron-3-super-120b-a12b`.
@@ -73,6 +79,8 @@ To enable live reasoning, copy [.env.example](.env.example) to `.env` **only if 
 
 Choose **My repository** to import a public GitHub URL or select a folder anywhere on your computer. Imports create managed source copies; originals stay unchanged. Local clones from other Git hosts work through folder import. Limits: 1,000 files, 2 MB per file and 20 MB total. Importing enables preview; execution still needs a supported manifest.
 
+Your project list survives refreshes. Selecting a project loads its declared metrics; completed normalized reports can be reopened and downloaded from **Saved reports**.
+
 Choose **Try a guided demo** for an immediately runnable ML or HTTP example. Goal presets explain what better means, while optional targets and correctness limits stay out of the way until needed.
 
 **GitHub sign-in:** `/login` explains the one-time OAuth setup. Add the client ID, client secret and allowed GitHub logins to your ignored `.env`; restart to enable sign-in and account-scoped workspaces. With OAuth unconfigured, local demo mode remains available. See [setup, metric explanations and import limits](docs/ONBOARDING.md).
@@ -96,10 +104,10 @@ python -m ruff check .
 python -m ruff format --check backend
 python -m mypy backend/ml_analyser
 python -m pytest --cov=ml_analyser --cov-report=term-missing --cov-fail-under=90
-node --test frontend/metrics.test.js frontend/analytics.test.js frontend/onboarding.test.js
+node --test frontend/metrics.test.js frontend/analytics.test.js frontend/onboarding.test.js frontend/history.test.js frontend/landing.test.js
 ```
 
-Latest local validation: **107 Linux tests passed, 92.88% coverage; 10 frontend tests passed.** See [commands, results and file inventory](docs/IMPLEMENTATION_VALIDATION.md). CI also checks JavaScript syntax.
+Latest local validation: **149 Linux tests passed, 93.62% coverage; 20 frontend tests passed.** See [commands, results and file inventory](docs/IMPLEMENTATION_VALIDATION.md). CI also checks JavaScript syntax.
 
 ## Boundaries
 

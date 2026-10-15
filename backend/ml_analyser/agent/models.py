@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from enum import StrEnum
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -332,6 +333,15 @@ class AdapterReadiness(StrictModel):
     profiles: list[str] = Field(default_factory=list)
     required_configuration: str | None = None
     supported_measurements: list[str] = Field(default_factory=list)
+    measurement_definitions: list[MetricDefinition] = Field(default_factory=list)
+
+
+class SavedRepository(StrictModel):
+    project_path: str
+    display_name: str = Field(min_length=1, max_length=120)
+    origin: Literal["github", "folder", "workspace"] = "workspace"
+    source_url: str | None = None
+    imported_at: str | None = None
 
 
 class RepositorySummary(StrictModel):

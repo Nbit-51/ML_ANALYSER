@@ -22,3 +22,17 @@ test("folder selection enforces count and size boundaries before upload", () => 
   assert.throws(() => selectSourceFiles(Array.from({length:1001}, (_, n) => ({webkitRelativePath:`r/${n}.py`, size:1}))), /smaller/);
   assert.throws(() => selectSourceFiles(Array.from({length:21}, (_, n) => ({webkitRelativePath:`r/${n}.py`, size:1024*1024}))), /smaller/);
 });
+
+const { declaredGoals, readinessMessage } = require("./onboarding.js");
+test("declared metrics preserve unknown direction without guessing", () => {
+  const goals = declaredGoals([{adapter:"generic_process",status:"preview_only",measurement_definitions:[{name:"my_cost",unit:"credits",direction:"minimize"},{name:"new_score"}]}]);
+  assert.equal(goals[0].direction,"minimize");
+  assert.equal(goals[0].unit,"credits");
+  assert.equal(goals[1].direction,null);
+  assert.equal(declaredGoals([{adapter:"broken",status:"detected_but_needs_configuration",measurement_definitions:[{name:"f1"}]}]).length,0);
+});
+test("readiness distinguishes preview from actual executable support", () => {
+  assert.match(readinessMessage([]),/add a benchmark manifest/);
+  assert.match(readinessMessage([{status:"preview_only"}]),/cannot execute/);
+  assert.match(readinessMessage([{status:"supported_and_executable"}]),/review the plan/);
+});

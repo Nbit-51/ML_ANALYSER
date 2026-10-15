@@ -100,3 +100,31 @@ Fixtures:
 - Reliability uses deterministic sample/variance/failure/environment rules. Statistical significance is not claimed. Harness correctness signatures do not establish the validity of the harness itself.
 - Capability/graph relationships are conservative static heuristics rather than full program analysis.
 - Durable workers, restart recovery, cancellation, authentication for shared deployment and automatic source promotion remain future work.
+
+
+## 2026-10-15 — completed workflow and cinematic landing
+
+- Windows: **133 passed, 16 Linux-only skips; 91.54% coverage**. The run used Python 3.14.2 and a fresh `--basetemp` under ignored `artifacts/` to avoid an existing Windows temporary-directory ACL problem. Two upstream deprecation warnings remain.
+- Linux/WSL Ubuntu 24.04: **149 passed; 93.62% coverage** on Python 3.12.3, including real bubblewrap integration tests. One upstream deprecation warning remains.
+- Frontend: **20 passed** via `npm run test:frontend`; all JavaScript/MJS syntax checks pass.
+- Ruff lint/format, mypy and diff checks pass. The backend coverage threshold stays at 90%.
+- Browser: desktop WebGL2 and mobile static/reduced-motion layouts, keyboard concept selection, branch scenarios, fixture comparisons and provenance were verified. No shader/console warnings were observed. See `docs/VISUAL_SYSTEM.md` for review controls and rendering budgets.
+- Actual offline-provider browser workflow: saved regression project → declared metric → preview → approved execution → accepted decision → saved report reopened → JSON downloaded.
+- Found and fixed during review: older normalized reports lacked the graph field; browser JSON serialization changed whole floats to integers and invalidated plan fingerprints. Tests now cover reconstruction without ledger mutation and numeric equivalence without collapsing booleans, strings or changed values.
+- No live model inference or real GitHub OAuth round trip was required or claimed. OAuth still needs installation-specific client credentials. No remote CI run is claimed for these local changes.
+
+Reproduce with the existing environment:
+
+```text
+python -m ruff check .
+python -m ruff format --check backend
+python -m mypy backend/ml_analyser
+python -m pytest --cov=ml_analyser --cov-report=term-missing --cov-fail-under=90
+npm run test:frontend
+npm ci --ignore-scripts
+npm run vendor:landing
+```
+
+New frontend files: `landing.css`, `landing.mjs`, `engine-data.mjs`, `engine-scene.mjs`, `landing.test.js`, `history.js`, `history.test.js`, and pinned licensed assets in `frontend/vendor/`. New tooling: root `package.json`, `package-lock.json` and `scripts/vendor-landing.cjs`. New design documentation: `docs/VISUAL_SYSTEM.md`.
+
+Modified: landing/workbench HTML, onboarding/analysis/session/app scripts, workbench CSS, adapter readiness and metric models, repository intake, account status, report APIs, SQLite catalog, report compatibility and fingerprint helpers; backend and frontend tests; CI; README and architecture/onboarding/context/validation documentation.

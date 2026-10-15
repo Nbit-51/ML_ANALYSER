@@ -340,5 +340,23 @@ def read_report(store: SQLiteRunStore, run_id: str) -> WorkbenchResult:
     for record in store.list_for_run(run_id):
         payload = record.metadata.get("workbench_json")
         if isinstance(payload, str):
-            return WorkbenchResult.model_validate(json.loads(payload))
+            return parse_report_snapshot(payload)
     raise ValueError("run report not found")
+
+
+def parse_report_snapshot(payload: str) -> WorkbenchResult:
+    """Read earlier reports without rewriting the append-only snapshot."""
+    data = json.loads(payload)
+    if "experiment_graph" not in data:
+        experiments = [ExperimentSpec.model_validate(item) for item in data["experiments"]]
+        measurements = {
+            label: [Measurement.model_validate(item) for item in items]
+            for label, items in data["measurements"].items()
+        }
+        data["experiment_graph"] = experiment_graph(
+            data["project_id"], experiments, measurements
+        ).model_dump(mode="json")
+        data["report"]["limitations"].append(
+            "Lineage reconstructed from the experiments and measurements in this older snapshot."
+        )
+    return WorkbenchResult.model_validate(data)

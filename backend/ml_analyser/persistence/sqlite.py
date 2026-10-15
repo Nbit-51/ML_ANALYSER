@@ -15,6 +15,7 @@ from ml_analyser.agent.models import (
     ApprovalStatus,
     EvidenceRecord,
     ExperimentSpec,
+    SavedRepository,
 )
 
 
@@ -67,6 +68,31 @@ class SQLiteRunStore:
                 ORDER BY sequence ASC
                 """,
                 (run_id,),
+            ).fetchall()
+        return [EvidenceRecord.model_validate_json(row[0]) for row in rows]
+
+    def save_repository(self, repository: SavedRepository) -> None:
+        with self._connect() as connection:
+            connection.execute(
+                "INSERT INTO repositories (project_path, payload) VALUES (?, ?) "
+                "ON CONFLICT(project_path) DO UPDATE SET payload = excluded.payload",
+                (repository.project_path, repository.model_dump_json()),
+            )
+
+    def list_repositories(self) -> list[SavedRepository]:
+        with self._connect() as connection:
+            rows = connection.execute(
+                "SELECT payload FROM repositories ORDER BY rowid DESC"
+            ).fetchall()
+        return [SavedRepository.model_validate_json(row[0]) for row in rows]
+
+    def recent_reports(self, limit: int = 20) -> list[EvidenceRecord]:
+        with self._connect() as connection:
+            rows = connection.execute(
+                "SELECT payload FROM evidence "
+                "WHERE json_type(payload, '$.metadata.workbench_json') = 'text' "
+                "ORDER BY sequence DESC LIMIT ?",
+                (limit,),
             ).fetchall()
         return [EvidenceRecord.model_validate_json(row[0]) for row in rows]
 
@@ -337,6 +363,10 @@ class SQLiteRunStore:
                     run_id TEXT NOT NULL,
                     state TEXT NOT NULL,
                     FOREIGN KEY (run_id) REFERENCES live_runs (run_id)
+                );
+                CREATE TABLE IF NOT EXISTS repositories (
+                    project_path TEXT PRIMARY KEY,
+                    payload TEXT NOT NULL
                 );
                 """
             )

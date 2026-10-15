@@ -183,6 +183,7 @@ function formatMetric(value, metric) {
 }
 
 function renderResult(result) {
+  document.dispatchEvent(new CustomEvent("workbench-result", {detail:result}));
   $("run-panel").classList.remove("hidden");
   $("results").classList.remove("hidden");
   const decision = result.decision.status;
@@ -224,6 +225,7 @@ async function pollRun(runId) {
     if (snapshot.status === "completed") {
       setStatus("success", "Run complete · measured decision recorded");
       renderResult(snapshot.result);
+      document.dispatchEvent(new Event("workbench-run-completed"));
       sessionStorage.removeItem("ml-analyser-live-run");
     } else if (snapshot.status === "failed") {
       showError(snapshot.error || "The run failed. Inspect the API logs.");

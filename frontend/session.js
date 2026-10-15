@@ -12,6 +12,7 @@
       const result = await fetch("/api/v1/auth/logout", { method: "POST" });
       if (!result.ok) { alert("Sign-out failed. Please retry."); return; }
       sessionStorage.removeItem("ml-analyser-live-run");
+      sessionStorage.removeItem("ml-analyser-project");
       location.assign("/login?logged_out=1");
     });
     const note = document.getElementById("provider-note");

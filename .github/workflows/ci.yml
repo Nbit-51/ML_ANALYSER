@@ -86,6 +86,10 @@ jobs:
           node --check frontend/workbench.js
           node --check frontend/onboarding.js
           node --check frontend/session.js
+          node --check frontend/history.js
+          node --check frontend/landing.mjs
+          node --check frontend/engine-scene.mjs
+          node --check frontend/engine-data.mjs
 
       - name: Test score explanations
-        run: node --test frontend/metrics.test.js frontend/analytics.test.js frontend/onboarding.test.js
+        run: node --test frontend/metrics.test.js frontend/analytics.test.js frontend/onboarding.test.js frontend/history.test.js frontend/landing.test.js

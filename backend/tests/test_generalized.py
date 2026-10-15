@@ -99,7 +99,20 @@ def test_real_ml_metrics_cross_generic_api_and_persist_report(
         payload["adapter"] = "ml_training"
         path.write_text(json.dumps(payload))
     prepared = prepare(configured, project)
-    execution = CLIENT.post("/api/v1/runs/execute", json=approve(prepared))
+    submitted = approve(prepared)
+
+    # JavaScript JSON.stringify removes the fractional representation of whole numbers.
+    def browser_numbers(value):
+        if isinstance(value, float) and value.is_integer():
+            return int(value)
+        if isinstance(value, dict):
+            return {key: browser_numbers(item) for key, item in value.items()}
+        if isinstance(value, list):
+            return [browser_numbers(item) for item in value]
+        return value
+
+    submitted = browser_numbers(submitted)
+    execution = CLIENT.post("/api/v1/runs/execute", json=submitted)
     assert execution.status_code == 200, execution.text
     result = execution.json()
     assert result["decision"]["status"] == "accepted"
@@ -112,6 +125,31 @@ def test_real_ml_metrics_cross_generic_api_and_persist_report(
     report = CLIENT.get(f"/api/v1/runs/{result['run_id']}/report").json()
     assert report == result
     assert report["report"]["source_fingerprint"]
+    # Older immutable snapshots predate the graph field; reconstruct only from stored facts.
+    from ml_analyser.agent.models import EvidenceKind, EvidenceRecord
+    from ml_analyser.persistence import SQLiteRunStore
+
+    legacy = json.loads(json.dumps(result))
+    legacy["run_id"] += "-legacy"
+    del legacy["experiment_graph"]
+    snapshot = json.dumps(legacy)
+    store = SQLiteRunStore(get_settings().state_database)
+    store.append(
+        legacy["run_id"],
+        EvidenceRecord(
+            id="legacy-snapshot",
+            kind=EvidenceKind.MEASUREMENT,
+            claim="Historical report",
+            source="ml_training",
+            metadata={"workbench_json": snapshot},
+        ),
+    )
+    restored = CLIENT.get(f"/api/v1/runs/{legacy['run_id']}/report")
+    assert restored.status_code == 200, restored.text
+    assert restored.json()["experiment_graph"]["nodes"]
+    assert "older snapshot" in restored.json()["report"]["limitations"][-1]
+    assert store.list_for_run(legacy["run_id"])[0].metadata["workbench_json"] == snapshot
+    assert len(CLIENT.get("/api/v1/runs/history").json()) == 2
     assert len(result["experiments"]) == 2
     assert result["experiments"][1]["parent_experiment_id"] == result["experiments"][0]["id"]
 

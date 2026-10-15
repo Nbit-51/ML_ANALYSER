@@ -70,3 +70,20 @@ def test_rejected_scope_cannot_be_authorized(tmp_path: Path) -> None:
 
     with pytest.raises(InvalidApprovalTransitionError, match="rejected"):
         service.authorize(approval.id, _scope())
+
+
+def test_fingerprint_survives_browser_number_serialization_without_collapsing_types() -> None:
+    from pydantic import BaseModel
+
+    from ml_analyser.agent.ids import model_fingerprint
+
+    class Payload(BaseModel):
+        value: int | float | bool | str
+
+    assert model_fingerprint(Payload(value=0.0)) == model_fingerprint(Payload(value=0))
+    assert model_fingerprint(Payload(value=1.0)) == model_fingerprint(Payload(value=1))
+    fingerprints = {model_fingerprint(Payload(value=value)) for value in [0, False, "0", 0.01]}
+    assert len(fingerprints) == 4
+    assert model_fingerprint(Payload(value=9007199254740993)) != model_fingerprint(
+        Payload(value=9007199254740992)
+    )

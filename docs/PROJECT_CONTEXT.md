@@ -44,3 +44,7 @@ CI retains the 90% coverage requirement and includes the new frontend transforma
 ## Onboarding update
 
 The landing page, guided goal presets, public GitHub/folder imports and optional GitHub OAuth are implemented. Source imports stay within managed copies; account-enabled requests use separate workspace/run storage. Live OAuth requires owner-provided credentials and an allowed-login list. See `docs/ONBOARDING.md`; the app does not fetch private repositories or execute arbitrary detected tests automatically.
+
+## October visual and workflow update
+
+A cinematic procedural 3D landing page is implemented at `/`, with optional WebGL2, semantic concept selection, scroll progression, demo-labeled fixture comparison, motion controls and static fallbacks. It uses local pinned Three.js/GSAP distributions; `/app`, OAuth and experiment APIs remain separate. The workbench now has a saved project list, declared goal metadata, saved normalized reports and JSON export. Browser approval round trips accept equivalent JSON number representations while retaining tamper/replay/source checks. See `docs/VISUAL_SYSTEM.md` and the October validation record.

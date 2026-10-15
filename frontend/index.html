@@ -11,6 +11,7 @@
   <script src="/static/app.js" defer></script>
   <script src="/static/analysis.js" defer></script>
   <script src="/static/onboarding.js" defer></script>
+  <script src="/static/history.js" defer></script>
   <script src="/static/session.js" defer></script>
 </head>
 <body>
@@ -31,6 +32,15 @@
 
     <section id="repository-panel" role="tabpanel" class="panel repository-analysis" aria-labelledby="analysis-title">
       <div class="section-heading"><span class="section-number">01</span><div><p class="kicker">REPOSITORY ANALYSIS</p><h2 id="analysis-title">Repository overview</h2></div></div>
+      <div class="project-library">
+        <label class="field" for="saved-project">Continue with a saved project
+          <select id="saved-project"><option value="">Choose a project…</option></select>
+        </label>
+        <button id="refresh-projects" class="secondary-button" type="button">Refresh projects</button>
+      </div>
+      <p id="library-status" class="help-text" role="status">Loading your project list…</p>
+      <details id="new-project-options" class="new-project-options" open>
+        <summary>Import another repository</summary>
       <div class="intake-grid">
         <form id="github-import-form" class="intake-card">
           <span class="kicker">IMPORT FROM GITHUB</span><h3>Paste a repository URL</h3>
@@ -50,6 +60,8 @@
         </div>
       </div>
       <p class="help-text">A source copy is stored on this app's server; originals stay unchanged. Common credential files, dependency folders and generated files are excluded. Review your selection for secrets in source code. Limit: 1,000 files, 2 MB each, 20 MB total. Private GitHub URLs are not fetched; choose your local clone instead.</p>
+      </details>
+      <div id="project-readiness" class="hidden" aria-live="polite"></div>
       <p id="import-status" class="import-status" role="status">No repository selected yet.</p>
       <p id="import-error" class="error-box hidden" role="alert"></p>
       <form id="analysis-form" class="analysis-form">
@@ -138,8 +150,14 @@
       </section>
     </div>
 
+    <section class="panel saved-reports" aria-labelledby="saved-reports-title">
+      <div class="section-heading"><div><p class="kicker">YOUR RECENT EXPERIMENTS</p><h2 id="saved-reports-title">Saved reports</h2></div><button id="refresh-reports" class="secondary-button" type="button">Refresh reports</button></div>
+      <p id="history-status" class="help-text" role="status">Loading saved reports…</p>
+      <div id="report-history"></div>
+    </section>
     <section class="panel results hidden" id="results" aria-labelledby="results-title">
       <div class="section-heading"><span class="section-number">04</span><div><p class="kicker">MEASURED OUTCOME</p><h2 id="results-title">Evidence & decision</h2></div><span id="decision-pill" class="decision-pill"></span></div>
+      <button id="download-report" class="secondary-button" type="button">Download report JSON</button>
       <p class="decision-reason" id="decision-reason"></p><details class="advanced-options"><summary>What does this decision mean?</summary><p class="help-text">Accepted: the measured candidate meets the configured goal and checks. Rejected: a required check failed. Inconclusive: there is not enough reliable evidence to decide. A preview or model suggestion is never a measured result.</p></details>
       <div id="result-overview"></div>
       <h3>Baseline vs candidate</h3><p class="chart-legend">Blue: baseline · Teal: candidate · Direction comes from declarations</p>

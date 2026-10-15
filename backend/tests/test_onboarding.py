@@ -40,7 +40,7 @@ def enable_auth(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_landing_login_and_setup(client: TestClient) -> None:
-    assert "A proven improvement?" in client.get("/").text
+    assert "Turn hypotheses into measurable improvements." in client.get("/").text
     assert "Connect your GitHub OAuth app" in client.get("/login").text
     assert "My repository" in client.get("/app").text
     status = client.get("/api/v1/auth/status").json()
@@ -371,3 +371,122 @@ def test_github_exchange_protocol(
     else:
         with pytest.raises(ValueError):
             asyncio.run(auth.github_identity("code", "verifier"))
+
+
+def test_project_library_persists_names_and_skips_missing_projects(client: TestClient) -> None:
+    assert client.get("/api/v1/repositories").json() == []
+    response = client.post(
+        "/api/v1/repositories/folder",
+        json={
+            "display_name": "My regression project",
+            "files": [file_data("main.py")],
+        },
+    )
+    path = response.json()["project_path"]
+    saved = TestClient(app).get("/api/v1/repositories").json()
+    assert saved[0]["project_path"] == path
+    assert saved[0]["display_name"] == "My regression project"
+    assert saved[0]["origin"] == "folder" and saved[0]["imported_at"]
+    root = get_settings().workspace_root
+    (root / ".hidden").mkdir()
+    (root / "plain-project").mkdir()
+    (root / path / "main.py").unlink()
+    (root / path).rmdir()
+    assert [item["project_path"] for item in client.get("/api/v1/repositories").json()] == [
+        "plain-project"
+    ]
+
+
+def test_project_details_are_read_only_and_preserve_declared_direction(client: TestClient) -> None:
+    import shutil
+
+    source = Path(__file__).resolve().parents[2] / "workspaces" / "ml-regression-demo"
+    root = get_settings().workspace_root / "regression"
+    shutil.copytree(source, root)
+    before = {file.name: file.read_bytes() for file in root.iterdir() if file.is_file()}
+    details = client.get("/api/v1/repositories/details", params={"project_path": "regression"})
+    assert details.status_code == 200, details.text
+    result = details.json()
+    assert result["executed"] is False
+    adapter = next(item for item in result["adapters"] if item["adapter"] == "ml_training")
+    metric = adapter["measurement_definitions"][0]
+    assert metric["name"] == "validation_rmse" and metric["direction"] == "minimize"
+    assert metric["unit"] == "target_units"
+    assert {file.name: file.read_bytes() for file in root.iterdir() if file.is_file()} == before
+    assert client.get("/api/v1/runs/history").json() == []
+    assert client.get(
+        "/api/v1/repositories/details", params={"project_path": "../escape"}
+    ).status_code in {404, 422}
+    assert (
+        client.get("/api/v1/repositories/details", params={"project_path": str(root)}).status_code
+        == 422
+    )
+    assert (
+        client.get("/api/v1/repositories/details", params={"project_path": "missing"}).status_code
+        == 404
+    )
+
+
+def test_invalid_manifest_does_not_offer_declared_goals(client: TestClient) -> None:
+    root = get_settings().workspace_root / "broken"
+    root.mkdir(parents=True)
+    (root / "train.py").write_text("raise RuntimeError('must not execute')")
+    (root / "ml_experiment.json").write_text('{"adapter":"ml_training"}')
+    result = client.get("/api/v1/repositories/details", params={"project_path": "broken"}).json()
+    adapter = next(item for item in result["adapters"] if item["adapter"] == "ml_training")
+    assert adapter["status"] == "detected_but_needs_configuration"
+    assert adapter["measurement_definitions"] == []
+
+
+def test_account_library_and_report_history_are_isolated(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import json
+
+    enable_auth(monkeypatch)
+    auth_store = AuthStore(get_settings().auth_database)
+    client.cookies.set("ml_session", auth_store.create("123", "alice"), domain="testserver.local")
+    source = Path(__file__).resolve().parents[2] / "workspaces" / "ml-regression-demo"
+    response = client.post(
+        "/api/v1/repositories/folder",
+        json={
+            "display_name": "Private regression",
+            "files": [file_data(p.name, p.read_bytes()) for p in source.iterdir() if p.is_file()],
+        },
+    )
+    project_path = response.json()["project_path"]
+    payload = json.loads((source / "prepare_request.json").read_text())
+    payload["project_path"] = project_path
+    prepared = client.post("/api/v1/runs/prepare", json=payload).json()
+    approval = prepared["approval"]["id"]
+    assert (
+        client.post(f"/api/v1/runs/approvals/{approval}", json={"approved": True}).status_code
+        == 200
+    )
+    executed = client.post(
+        "/api/v1/runs/execute",
+        json={"adapter": "ml_training", "approval_id": approval, "plan": prepared["plan"]},
+    )
+    assert executed.status_code == 200, executed.text
+    report = executed.json()
+    run_id = report["run_id"]
+    saved = client.get("/api/v1/runs/history").json()
+    assert len(saved) == 1 and saved[0]["run_id"] == run_id
+    assert saved[0]["metric"] == "validation_rmse" and saved[0]["decision"] == "accepted"
+    assert client.get(f"/api/v1/runs/{run_id}/report").json() == report
+    assert client.get("/api/v1/repositories").json()[0]["display_name"] == "Private regression"
+    client.cookies.clear()
+    client.cookies.set("ml_session", auth_store.create("456", "bob"), domain="testserver.local")
+    assert client.get("/api/v1/repositories").json() == []
+    assert client.get("/api/v1/runs/history").json() == []
+    assert client.get(f"/api/v1/runs/{run_id}/report").status_code == 404
+    assert (
+        client.get(
+            "/api/v1/repositories/details", params={"project_path": project_path}
+        ).status_code
+        == 404
+    )
+    monkeypatch.setenv("ML_ANALYSER_GITHUB_ALLOWED_USERS", "alice")
+    get_settings.cache_clear()
+    assert client.get("/api/v1/auth/status").json()["user"] is None
+    assert client.get("/api/v1/runs/history").status_code == 401

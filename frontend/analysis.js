@@ -49,6 +49,10 @@ function renderRepositoryPreview(result) {
   }
   for (const adapter of result.repository_summary.adapters) {
     if (adapter.status !== "supported_and_executable") continue;
+    if (adapter.supported_measurements.length && !adapter.supported_measurements.includes(metric)) {
+      adapterControls.append(analysisNode("p", `This goal (${metric}) is not emitted by ${adapter.adapter}. Choose a project-declared metric above before preparing its experiment.`, "goal-explanation"));
+      continue;
+    }
     const button = analysisNode("button", `Prepare ${adapter.adapter} experiment`, "primary-button");
     button.type = "button";
     button.addEventListener("click", async () => {
@@ -129,6 +133,8 @@ function renderRepositoryPreview(result) {
 
 analysisElement("analysis-form").addEventListener("submit", async (event) => {
   event.preventDefault();
+  const requestForm = analysisElement("analysis-form");
+  const requestedFields = JSON.stringify([...new FormData(requestForm)]);
   const button = analysisElement("analysis-submit");
   const errorBox = analysisElement("analysis-error");
   button.disabled = true;
@@ -177,7 +183,7 @@ analysisElement("analysis-form").addEventListener("submit", async (event) => {
     if (!response.ok) {
       throw new Error(typeof result.detail === "string" ? result.detail : `Analysis failed (${response.status})`);
     }
-    if (analysisElement("analysis-path").value.trim() !== path || analysisElement("analysis-metric").value.trim() !== metric) return;
+    if (JSON.stringify([...new FormData(requestForm)]) !== requestedFields) return;
     renderRepositoryPreview(result);
   } catch (error) {
     errorBox.textContent = error.message;

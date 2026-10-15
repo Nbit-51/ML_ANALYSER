@@ -8,13 +8,19 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import Field
 
 from ml_analyser.adapters.registry import default_registry
-from ml_analyser.agent.analytics import WorkbenchResult, persist_workbench_result, read_report
+from ml_analyser.agent.analytics import (
+    WorkbenchResult,
+    parse_report_snapshot,
+    persist_workbench_result,
+    read_report,
+)
 from ml_analyser.agent.approval import ApprovalService
 from ml_analyser.agent.backend_benchmark import BackendBenchmarkPlan
 from ml_analyser.agent.evaluator import DecisionEvaluator
 from ml_analyser.agent.ml_training import MlTrainingPlan
 from ml_analyser.agent.models import (
     ApprovalRecord,
+    DecisionStatus,
     EvidenceRecord,
     ProjectStateGraph,
     RepositoryInventory,
@@ -57,6 +63,40 @@ class PrepareResult(StrictModel):
     evidence: list[EvidenceRecord]
     repository_summary: RepositorySummary
     warnings: list[str] = Field(default_factory=list)
+
+
+class SavedReport(StrictModel):
+    run_id: str
+    project_id: str
+    repository: str
+    adapter: str
+    metric: str
+    direction: str
+    decision: DecisionStatus
+    observed_at: str
+
+
+@router.get("/history", response_model=list[SavedReport])
+def saved_reports() -> list[SavedReport]:
+    reports = []
+    for evidence in SQLiteRunStore(get_settings().state_database).recent_reports():
+        payload = evidence.metadata["workbench_json"]
+        if not isinstance(payload, str):
+            continue
+        report = parse_report_snapshot(payload)
+        reports.append(
+            SavedReport(
+                run_id=report.run_id,
+                project_id=report.project_id,
+                repository=report.report.repository,
+                adapter=report.adapter,
+                metric=report.success_contract.objective.metric,
+                direction=report.success_contract.objective.direction.value,
+                decision=report.decision.status,
+                observed_at=evidence.observed_at.isoformat(),
+            )
+        )
+    return reports
 
 
 def pipeline_for(adapter: str) -> Any:
