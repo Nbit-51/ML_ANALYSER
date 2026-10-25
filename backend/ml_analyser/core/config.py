@@ -40,6 +40,9 @@ class Settings(BaseSettings):
     github_client_secret: SecretStr = SecretStr("")
     github_allowed_users: str = ""
     auth_database: Path = Path("artifacts/auth.db")
+    deployment_mode: Literal["local", "judge"] = "local"
+    lab_daily_limit: int = Field(default=0, ge=0, le=100)
+    lab_cooldown_seconds: int = Field(default=60, ge=0, le=3600)
 
     @field_validator("app_url")
     @classmethod

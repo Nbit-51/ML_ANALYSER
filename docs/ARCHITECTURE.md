@@ -1,5 +1,11 @@
 # Architecture
 
+The public Counterexample Lab is a separate bounded workflow described in
+[its protocol](COUNTEREXAMPLE_LAB.md). It reuses the approval service, canonical JSON,
+deterministic evaluator and SQLite evidence ledger while executing only fixed Python
+cache logic. It does not widen the repository execution surface. The deployment
+entrypoint defaults to judge mode; existing `uvicorn` local startup retains local mode.
+
 ## Implemented system
 
 ML Analyser is a local evidence-driven repository experimentation engine with ML as its flagship use case. FastAPI exposes typed contracts and controlled experiments; SQLite stores approvals, append-only evidence, run events and experiment lineage; the browser uses lightweight JavaScript and SVG. Existing classification, threshold and HTTP demonstrations remain available.

@@ -1,0 +1,76 @@
+ML Analyser Free Use License
+Version 1.0, October 25, 2026
+
+Copyright (c) 2026 Nbit-51. All rights reserved except as expressly granted below.
+
+This is a source-available, permission-required license. It is not an open-source
+license and does not grant the redistribution and modification rights required
+by the Open Source Definition.
+
+1. Scope
+
+These terms apply to original ML Analyser source code, documentation and assets
+provided by the copyright holder (the "Software"), unless a file states other
+terms. Third-party components remain governed by their own licenses. These
+terms do not replace or restrict rights granted by those third-party licenses.
+
+2. Free use
+
+You may access and use the official application without a license fee. You may
+inspect the published source, download it, and make the copies reasonably
+necessary to install and run an unmodified version for your own personal,
+educational, evaluation or internal business use, without a license fee.
+You may set documented runtime options, environment variables and your own
+credentials to operate that unmodified version.
+
+This permission does not promise continued hosting, support, unlimited
+resources, third-party API credits, or freedom from third-party service fees.
+
+3. Permission required for other uses
+
+Except for the uses expressly permitted above, rights granted by applicable
+law, and rights independently granted by the repository hosting platform's
+terms, you must obtain the copyright holder's prior written permission to:
+
+  a. modify the Software or create derivative works from its code or assets;
+  b. redistribute, republish, sublicense, sell or otherwise supply the Software,
+     its source code, or substantial portions of it to others;
+  c. offer a public hosted copy or service based on the Software; or
+  d. remove copyright/license notices, rebrand the Software as your own work,
+     or use the project's name or marks to imply endorsement.
+
+Public availability of source code does not itself grant these additional
+permissions. Nothing in this license overrides rights a hosting platform
+independently grants its users, including platform-supported viewing or
+forking, or restricts rights that cannot lawfully be restricted.
+
+4. Inputs and results
+
+These terms claim no ownership of your own input data. You may use and share
+experiment reports and measurement data produced by normal use of the
+Software, provided doing so does not redistribute protected Software source
+or violate another person's rights. Third-party content in a report retains
+its applicable rights and terms.
+
+5. Ownership and notices
+
+All rights not expressly granted are reserved. Retain this license and the
+copyright notices with copies you are permitted to make. No ownership of the
+Software or general permission to use the holder's trademarks is transferred.
+To request additional permission, contact the copyright holder through:
+https://github.com/Nbit-51/ML_ANALYSER
+
+6. Termination
+
+Your permissions under this license terminate if you breach its conditions.
+On termination, stop uses that relied on those permissions. Rights that arise
+independently under applicable law or third-party terms are unaffected.
+
+7. No warranty; limitation of liability
+
+TO THE EXTENT PERMITTED BY APPLICABLE LAW, THE SOFTWARE IS PROVIDED "AS IS",
+WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. TO THE EXTENT PERMITTED
+BY APPLICABLE LAW, THE COPYRIGHT HOLDER AND CONTRIBUTORS WILL NOT BE LIABLE
+FOR CLAIMS, DAMAGES OR OTHER LIABILITY ARISING FROM THE SOFTWARE OR ITS USE,
+WHETHER IN CONTRACT, TORT OR OTHERWISE.

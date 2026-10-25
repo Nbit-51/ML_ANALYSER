@@ -1,5 +1,18 @@
 # Project context
 
+## October 25 public demo update
+
+The `/lab` Counterexample Lab implements a bounded propose/approve/measure/revise loop
+for a multi-tenant cache configuration. Live Nemotron inference, actual counterexample
+feedback and a passing revision were verified. A captured live capsule is committed and
+replays without credentials. UI labels distinguish fresh, recorded and scripted runs.
+Judge mode restricts repository execution, and live demo quotas default to zero.
+Render native Python and a portable nonroot Dockerfile are supplied; local Docker Desktop
+startup failed, so image validation is delegated to the configured CI smoke job.
+See the lab/deployment documentation. The owner selected a permission-required,
+source-available license after being told it conflicts with hackathon open-source rules.
+Deployment and submission must not be described as complete until independently verified.
+
 ## Product intent
 
 Preserve the evidence-driven verification architecture: a machine-readable success contract, falsifiable hypotheses, explicit approval, isolated experiments, deterministic measurement evaluation, an append-only ledger and persistent lineage. ML remains the flagship domain; the engine also supports declared non-ML process benchmarks.

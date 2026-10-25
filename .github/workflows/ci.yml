@@ -90,6 +90,44 @@ jobs:
           node --check frontend/landing.mjs
           node --check frontend/engine-scene.mjs
           node --check frontend/engine-data.mjs
+          node --check frontend/lab.js
 
       - name: Test score explanations
-        run: node --test frontend/metrics.test.js frontend/analytics.test.js frontend/onboarding.test.js frontend/history.test.js frontend/landing.test.js
+        run: node --test frontend/*.test.js
+
+  judge-image:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build public demo image
+        run: docker build -t ml-analyser-judge:ci .
+      - name: Smoke test public demo with no secrets
+        run: |
+          docker run -d --name ml-analyser-judge -p 8000:8000 ml-analyser-judge:ci
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8000/api/v1/health; then break; fi
+            sleep 1
+          done
+          docker exec -i ml-analyser-judge python - <<'PY'
+          import httpx
+          from ml_analyser.lab.engine import replay
+
+          with httpx.Client(base_url="http://127.0.0.1:8000") as client:
+              assert client.get("/lab").status_code == 200
+              assert client.get("/api/v1/lab/status").json()["live_available"] is False
+              assert client.post("/api/v1/runs/prepare", json={}).status_code == 403
+              prepared = client.post("/api/v1/lab/prepare", json={}).json()
+              result = client.post("/api/v1/lab/execute", json={
+                  "plan": prepared["plan"], "approval_id": prepared["approval"]["id"],
+                  "approved": True,
+              })
+              assert result.status_code == 200, result.text
+              assert result.json()["winner_attempt"] == 3
+              assert replay(result.json()) == []
+              example = client.get("/static/examples/cache-capsule-live.json").json()
+              assert replay(example) == []
+          PY
+      - name: Container logs
+        if: always()
+        run: docker logs ml-analyser-judge || true

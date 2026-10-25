@@ -1,5 +1,36 @@
 # Implementation and validation record
 
+## 2026-10-25 — Counterexample Lab and free deployment preparation
+
+- Final Windows suite: **149 passed, 16 Linux-only skips, 92.30% coverage**. Two upstream
+  deprecation warnings. Log: ignored `artifacts/lab-windows-validation.log`.
+- Final WSL/Linux suite: **165 passed, 94.18% coverage**, including real bubblewrap
+  integration. One upstream deprecation warning. Log: `artifacts/lab-linux-validation.log`.
+- Ruff lint/format and strict mypy pass; **22 frontend tests** pass.
+- Real Nebius/Nemotron preview succeeded. Live browser lab campaign: **1 call / 1,669
+  reported tokens**, accepted on first attempt, lookups **120 → 30**, **0 incorrect prices**.
+  Declared unsafe control: **120 → 5**, **100 incorrect prices**, rejected. The control
+  is not represented as a model proposal. The recorded capsule replays on Windows/Linux.
+- Separate live counterexample-feedback check via `scripts/validate_lab.py`: one request,
+  2,617 reported tokens, revision selected all three cache fields and passed a fresh
+  challenge with **120 → 30** lookups and **0 errors**.
+- Actual browser offline workflow rejected two candidates and accepted attempt three.
+  Recorded evidence is visibly labeled; browser download then CLI replay passes.
+- Browser checks at 1280×960, 390×844 and 320×740: no horizontal overflow. Counterexample
+  disclosures, provider selection, approval and export work. Screenshot is ignored under
+  `artifacts/visual-qa/lab-evidence-desktop.png`.
+- Verification found a browser `0.0`→`0` serialization digest issue; canonical numeric
+  JSON is now shared with approval hashing and covered by a regression test.
+- Tests cover ownership, expiry, tampered/replayed approvals, atomic quotas, invalid
+  provider responses, repeat/error/budget stops, source integrity, capsule edits,
+  recorded evidence and the judge-mode execution boundary.
+- The local Docker Desktop engine failed to start; no reset or data deletion was done.
+  A CI job builds the image and smoke-tests it without secrets. No local image-build or
+  public deployment success is claimed in this validation record.
+
+Live validation commands require configured Nebius credentials and consume inference
+credits; ordinary tests force mock reasoning. Credential values are never logged.
+
 Validated locally on 2026-09-25. These results describe the working tree, not a remote GitHub Actions run. Tests use deterministic mock reasoning; no live Nebius inference was claimed or required.
 
 ## Implemented architecture

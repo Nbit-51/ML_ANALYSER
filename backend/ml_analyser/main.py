@@ -38,6 +38,10 @@ def create_app() -> FastAPI:
         async def login_page() -> FileResponse:
             return FileResponse(frontend_root / "login.html")
 
+        @application.get("/lab", include_in_schema=False)
+        async def counterexample_lab() -> FileResponse:
+            return FileResponse(frontend_root / "lab.html")
+
     @application.get("/status", tags=["service"])
     async def service_root() -> dict[str, str]:
         return {

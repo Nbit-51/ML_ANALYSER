@@ -1,0 +1,18 @@
+# Explicit free compute, no paid database/disk, no credentials in source.
+services:
+  - type: web
+    name: ml-analyser
+    runtime: python
+    plan: free
+    buildCommand: pip install -e .
+    startCommand: python scripts/serve.py
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      - key: ML_ANALYSER_DEPLOYMENT_MODE
+        value: judge
+      - key: ML_ANALYSER_MODEL_PROVIDER
+        value: mock
+      - key: ML_ANALYSER_LAB_DAILY_LIMIT
+        value: "0"

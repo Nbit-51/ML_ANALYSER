@@ -15,13 +15,17 @@ def stable_id(prefix: str, *parts: str) -> str:
 
 def model_fingerprint(model: BaseModel) -> str:
     """Hash a model's canonical JSON representation for approval integrity."""
-    payload = json.dumps(
-        _canonical_numbers(model.model_dump(mode="json")),
+    return sha256(canonical_json(model.model_dump(mode="json")).encode("utf-8")).hexdigest()
+
+
+def canonical_json(value: Any) -> str:
+    """Serialize JSON with equivalent whole-number representations normalized."""
+    return json.dumps(
+        _canonical_numbers(value),
         sort_keys=True,
         separators=(",", ":"),
         ensure_ascii=True,
     )
-    return sha256(payload.encode("utf-8")).hexdigest()
 
 
 def _canonical_numbers(value: Any) -> Any:

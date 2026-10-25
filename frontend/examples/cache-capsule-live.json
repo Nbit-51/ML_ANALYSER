@@ -1,0 +1,297 @@
+{
+  "schema_version": 1,
+  "plan": {
+    "run_id": "c6e8b0ba-be03-4100-8637-8d7a42bf9111",
+    "provider": "nebius-token-factory:nvidia/nemotron-3-super-120b-a12b",
+    "protocol": "cache-counterexamples-v1",
+    "source_sha256": "f717e5c4ddd8eea94304c15b3933082c4c33e3db5bfc7d7c27554b239f768df7",
+    "challenge_commitment": "45f97e167184ba2d84778cce6be82ea497f1b7d46d4305c727bf1066ddc9de4b",
+    "first_proposal": {
+      "cache_fields": [
+        "tenant",
+        "sku",
+        "currency"
+      ],
+      "rationale": "The quote function hashes the concatenation of tenant, sku, and currency, so the price depends on all three fields. Omitting any field would cause distinct queries with different omitted-field values to share the same cache key while producing different prices, leading to incorrect quotes. To guarantee zero incorrect quotes, the cache key must include every field that influences the quote. The workload varies tenant (3 values), currency (2 values), and sku (5 values), yielding 30 unique combinations. Caching on all three fields results in exactly 30 reference lookups (one per unique key) with subsequent hits, which is optimal under the zero-error constraint."
+    },
+    "max_attempts": 3,
+    "rounds_per_attempt": 3,
+    "success_contract": {
+      "objective": {
+        "metric": "reference_lookups",
+        "direction": "minimize",
+        "target": null,
+        "minimum_improvement": 1
+      },
+      "constraints": [
+        {
+          "metric": "incorrect_quotes",
+          "operator": "eq",
+          "threshold": 0,
+          "tolerance": 0
+        }
+      ],
+      "budget": {
+        "max_cost_usd": null,
+        "max_wall_clock_seconds": null,
+        "max_cpu_seconds": null,
+        "max_gpu_seconds": null,
+        "max_model_tokens": null,
+        "max_experiments": null
+      }
+    }
+  },
+  "challenge_seed_reveal": "dda5019812a897a34bbe7aa280245747d9a32852659d5900",
+  "negative_control": {
+    "number": 0,
+    "proposal": {
+      "cache_fields": [
+        "sku"
+      ],
+      "rationale": "Declared unsafe negative control; not a model proposal."
+    },
+    "challenge_seed": 215551915632717,
+    "discovery": {
+      "reference_lookups": 5,
+      "incorrect_quotes": 0
+    },
+    "baseline": {
+      "reference_lookups": 120,
+      "incorrect_quotes": 0
+    },
+    "candidate": {
+      "reference_lookups": 5,
+      "incorrect_quotes": 100
+    },
+    "paired_rounds": [
+      {
+        "baseline": {
+          "reference_lookups": 120,
+          "incorrect_quotes": 0
+        },
+        "candidate": {
+          "reference_lookups": 5,
+          "incorrect_quotes": 100
+        }
+      },
+      {
+        "baseline": {
+          "reference_lookups": 120,
+          "incorrect_quotes": 0
+        },
+        "candidate": {
+          "reference_lookups": 5,
+          "incorrect_quotes": 100
+        }
+      },
+      {
+        "baseline": {
+          "reference_lookups": 120,
+          "incorrect_quotes": 0
+        },
+        "candidate": {
+          "reference_lookups": 5,
+          "incorrect_quotes": 100
+        }
+      }
+    ],
+    "counterexamples": [
+      {
+        "query": {
+          "tenant": "tenant-642964441",
+          "sku": "sku-143789665",
+          "currency": "EUR"
+        },
+        "expected_minor_units": 73895,
+        "actual_minor_units": 77577
+      },
+      {
+        "query": {
+          "tenant": "tenant-816790582",
+          "sku": "sku-143789665",
+          "currency": "EUR"
+        },
+        "expected_minor_units": 74002,
+        "actual_minor_units": 77577
+      },
+      {
+        "query": {
+          "tenant": "tenant-946770004",
+          "sku": "sku-215739744",
+          "currency": "EUR"
+        },
+        "expected_minor_units": 13717,
+        "actual_minor_units": 17304
+      }
+    ],
+    "decision": {
+      "experiment_id": "lab-attempt-0",
+      "status": "rejected",
+      "objective": {
+        "metric": "reference_lookups",
+        "baseline_value": 120,
+        "candidate_value": 5,
+        "improvement": 115,
+        "target_passed": true,
+        "minimum_improvement_passed": true,
+        "passed": true
+      },
+      "constraints": [
+        {
+          "metric": "incorrect_quotes",
+          "operator": "eq",
+          "threshold": 0,
+          "observed_value": 100,
+          "passed": false,
+          "reason": "Observed 100.0 fails eq 0.0."
+        }
+      ],
+      "budget": {
+        "passed": true,
+        "violations": [],
+        "usage": {
+          "cost_usd": 0,
+          "wall_clock_seconds": 0,
+          "cpu_seconds": 0,
+          "gpu_seconds": 0,
+          "model_tokens": 0,
+          "experiments": 1
+        }
+      },
+      "reason": "Rejected because the guardrail check failed.",
+      "evidence_ids": [
+        "cache-counterexamples-v1:215551915632717:0"
+      ],
+      "benchmark_reliability": {
+        "status": "reliable",
+        "reasons": [],
+        "minimum_samples": 3,
+        "maximum_cv": 0.3,
+        "environment_compatible": true,
+        "statistical_significance_tested": false
+      }
+    },
+    "configuration_diff": "--- baseline/config.json\n+++ candidate/config.json\n@@ -1,3 +1,5 @@\n {\n-  \"cache_fields\": []\n+  \"cache_fields\": [\n+    \"sku\"\n+  ]\n }"
+  },
+  "attempts": [
+    {
+      "number": 1,
+      "proposal": {
+        "cache_fields": [
+          "tenant",
+          "sku",
+          "currency"
+        ],
+        "rationale": "The quote function hashes the concatenation of tenant, sku, and currency, so the price depends on all three fields. Omitting any field would cause distinct queries with different omitted-field values to share the same cache key while producing different prices, leading to incorrect quotes. To guarantee zero incorrect quotes, the cache key must include every field that influences the quote. The workload varies tenant (3 values), currency (2 values), and sku (5 values), yielding 30 unique combinations. Caching on all three fields results in exactly 30 reference lookups (one per unique key) with subsequent hits, which is optimal under the zero-error constraint."
+      },
+      "challenge_seed": 119608573044254,
+      "discovery": {
+        "reference_lookups": 5,
+        "incorrect_quotes": 0
+      },
+      "baseline": {
+        "reference_lookups": 120,
+        "incorrect_quotes": 0
+      },
+      "candidate": {
+        "reference_lookups": 30,
+        "incorrect_quotes": 0
+      },
+      "paired_rounds": [
+        {
+          "baseline": {
+            "reference_lookups": 120,
+            "incorrect_quotes": 0
+          },
+          "candidate": {
+            "reference_lookups": 30,
+            "incorrect_quotes": 0
+          }
+        },
+        {
+          "baseline": {
+            "reference_lookups": 120,
+            "incorrect_quotes": 0
+          },
+          "candidate": {
+            "reference_lookups": 30,
+            "incorrect_quotes": 0
+          }
+        },
+        {
+          "baseline": {
+            "reference_lookups": 120,
+            "incorrect_quotes": 0
+          },
+          "candidate": {
+            "reference_lookups": 30,
+            "incorrect_quotes": 0
+          }
+        }
+      ],
+      "counterexamples": [],
+      "decision": {
+        "experiment_id": "lab-attempt-1",
+        "status": "accepted",
+        "objective": {
+          "metric": "reference_lookups",
+          "baseline_value": 120,
+          "candidate_value": 30,
+          "improvement": 90,
+          "target_passed": true,
+          "minimum_improvement_passed": true,
+          "passed": true
+        },
+        "constraints": [
+          {
+            "metric": "incorrect_quotes",
+            "operator": "eq",
+            "threshold": 0,
+            "observed_value": 0,
+            "passed": true,
+            "reason": "Observed 0.0 passes eq 0.0."
+          }
+        ],
+        "budget": {
+          "passed": true,
+          "violations": [],
+          "usage": {
+            "cost_usd": 0,
+            "wall_clock_seconds": 0,
+            "cpu_seconds": 0,
+            "gpu_seconds": 0,
+            "model_tokens": 0,
+            "experiments": 1
+          }
+        },
+        "reason": "Objective, guardrails, and budget passed.",
+        "evidence_ids": [
+          "cache-counterexamples-v1:119608573044254:1"
+        ],
+        "benchmark_reliability": {
+          "status": "reliable",
+          "reasons": [],
+          "minimum_samples": 3,
+          "maximum_cv": 0.3,
+          "environment_compatible": true,
+          "statistical_significance_tested": false
+        }
+      },
+      "configuration_diff": "--- baseline/config.json\n+++ candidate/config.json\n@@ -1,3 +1,7 @@\n {\n-  \"cache_fields\": []\n+  \"cache_fields\": [\n+    \"tenant\",\n+    \"sku\",\n+    \"currency\"\n+  ]\n }"
+    }
+  ],
+  "winner_attempt": 1,
+  "stop_reason": "Measured improvement passes the fresh challenge and correctness guardrail.",
+  "model_calls": 1,
+  "model_tokens": 1669,
+  "limitations": [
+    "Synthetic pricing workload; no production latency or cloud-cost claim.",
+    "Work units count reference function calls. Timings are not the objective.",
+    "Fresh generated challenge per attempt; previous failures inform revisions.",
+    "Three deterministic rounds check reproducibility, not statistical significance.",
+    "Fixed configuration search over three fields; not arbitrary code generation.",
+    "Capsule hash verifies consistency, not authenticity or benchmark completeness.",
+    "Ephemeral host storage can reset quotas and history; export evidence before restart."
+  ],
+  "capsule_sha256": "99d761779fe78321d06093ea23e8acba79195f6230660238e8cb18e85e436ae2"
+}

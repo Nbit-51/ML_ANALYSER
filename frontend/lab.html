@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Counterexample Lab | ML Analyser</title>
+  <link rel="stylesheet" href="/static/lab.css">
+  <script src="/static/lab.js" defer></script>
+</head>
+<body>
+  <header><a class="brand" href="/">ML_ANALYSER <span>/ COUNTEREXAMPLE LAB</span></a><a href="/app">Repository workbench ↗</a></header>
+  <main>
+    <section class="intro">
+      <p class="eyebrow">NVIDIA NEMOTRON × NEBIUS TOKEN FACTORY</p>
+      <h1>A faster answer.<br><em>But is it still correct?</em></h1>
+      <p class="lede">An AI agent optimizes a pricing cache. A separate verifier challenges every candidate with new tenants and currencies. Incorrect quotes become concrete feedback for the next revision.</p>
+      <div class="flow" aria-label="Experiment workflow"><span>01 · Propose</span><i>→</i><span>02 · Approve</span><i>→</i><span>03 · Challenge</span><i>→</i><span>04 · Revise</span><i>→</i><span>05 · Replay</span></div>
+    </section>
+    <div class="setup-grid">
+      <section class="card">
+        <p class="eyebrow">THE ENGINEERING PROBLEM</p><h2>A cache key can hide a regression.</h2>
+        <p>Caching by product alone looks effective in a single-tenant test. In a shared service, the same product can have different prices for each tenant and currency.</p>
+        <dl class="contract"><div><dt>Improve</dt><dd>Fewer reference lookups <small>↓ Lower is better</small></dd></div><div><dt>Preserve</dt><dd>Zero incorrect prices <small>Exact reference comparison</small></dd></div><div><dt>Budget</dt><dd>Up to 3 proposals <small>3 paired rounds per proposal</small></dd></div></dl>
+        <details><summary>What is actually executed?</summary><p>The committed Python cache implementation runs on synthetic queries. The agent chooses among three cache-key fields. No visitor code, shell commands, dependencies, or production data are executed. Lookup counts are measured work units, not claimed latency or dollars saved.</p><a href="https://github.com/Nbit-51/ML_ANALYSER/blob/main/backend/ml_analyser/lab/workload.py" target="_blank" rel="noreferrer">Read the benchmark source ↗</a></details>
+      </section>
+      <section class="card setup">
+        <p class="eyebrow">START A REAL MEASUREMENT</p><h2>Choose the proposal source.</h2>
+        <label for="lab-mode">Reasoning provider</label>
+        <select id="lab-mode"><option value="offline">Offline scripted policy · no inference credits</option><option value="live" disabled>NVIDIA Nemotron on Nebius · checking configuration…</option></select>
+        <p id="provider-status" class="muted">Checking live model availability…</p>
+        <button id="prepare" class="primary" type="button">Prepare the first proposal <span>↗</span></button>
+        <button id="recorded" type="button">Inspect a recorded live run</button>
+        <p class="muted">Preparation can call the selected model. Benchmark execution waits for your approval. Offline mode runs the same verifier with clearly labeled scripted choices.</p>
+        <p id="lab-status" role="status" aria-live="polite">Ready to prepare.</p>
+        <p id="lab-error" class="error hidden" role="alert"></p>
+      </section>
+    </div>
+    <section id="review" class="card hidden">
+      <p class="eyebrow">REVIEW THE BOUNDED CAMPAIGN</p><h2>Approve the scope. Inspect the outcome.</h2>
+      <p id="proposal-rationale"></p><pre id="proposal-config"></pre>
+      <p>The challenge seed is committed before approval and revealed in the downloaded evidence. Each revision receives a fresh generated workload. Earlier counterexamples may inform later proposals.</p>
+      <div class="hash-row"><span>CHALLENGE COMMITMENT</span><code id="commitment"></code></div>
+      <details><summary>Inspect the exact reference source</summary><pre id="lab-source"></pre></details>
+      <button id="approve" class="primary" type="button">Approve and run up to 3 attempts <span>→</span></button>
+    </section>
+    <section id="results" class="hidden" aria-live="polite">
+      <div class="results-heading"><div><p class="eyebrow">OBSERVED EVIDENCE</p><h2 id="result-title">Campaign results</h2></div><button id="download" type="button">Download replay capsule ↓</button></div>
+      <p id="evidence-mode" class="eyebrow"></p><p id="result-summary"></p><p id="result-provider" class="muted"></p>
+      <div class="evidence-grid"><section id="negative-control" class="card control"></section>
+      <div id="attempts"></div></div>
+      <section class="card"><p class="eyebrow">VERIFY WITHOUT TRUSTING THE MODEL</p><h3>Replay every decision on your own machine.</h3><p>After installing this repository, download the capsule and run:</p><pre>python scripts/replay_capsule.py path/to/capsule.json</pre><p>The checker regenerates the workload and independently recomputes every result. A digest detects inconsistent edits; it does not prove who produced the file.</p><details><summary>Scope and limitations</summary><ul id="limitations"></ul></details></section>
+    </section>
+  </main>
+  <footer><span>NEMOTRON PROPOSES. PYTHON MEASURES. RULES DECIDE.</span><a href="https://github.com/Nbit-51/ML_ANALYSER">Source code ↗</a></footer>
+</body></html>

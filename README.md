@@ -1,5 +1,8 @@
 # ML Analyser
 
+**License:** [Free use; permission required for code changes and redistribution](LICENSE).
+This is source-available, **not open source**. [Hackathon eligibility implications](docs/LICENSING_DECISION.md).
+
 [![CI](https://github.com/Nbit-51/ML_ANALYSER/actions/workflows/ci.yml/badge.svg)](https://github.com/Nbit-51/ML_ANALYSER/actions/workflows/ci.yml)
 
 ### From an optimization hypothesis to a measured engineering decision.
@@ -9,6 +12,34 @@ ML Analyser helps developers answer a concrete question: **did this change impro
 Set a goal such as **lower validation RMSE** or **reduce P95 latency without changing the response**. Review the proposed explanation and declared configuration change, approve the experiment, then see what the measurements support: **accepted, rejected or inconclusive**.
 
 **Nemotron reasons. Adapters measure. Deterministic rules decide.**
+
+## Start with the Counterexample Lab
+
+Open **`/lab`** for the public judge experience. NVIDIA Nemotron proposes a bounded cache
+configuration; Python measures reference lookups and checks every price against an exact
+reference on a fresh generated workload. Incorrect quotes become feedback for up to two
+revisions, within one approved three-attempt campaign.
+
+The demonstrated live run reduced lookups **120 → 30 (75%) with zero incorrect quotes**.
+A declared product-only negative control reduced lookups further but returned **100 wrong
+prices**, so the guardrail rejected it. These are synthetic benchmark work counts, not
+production latency or dollar savings. The negative control is explicitly separate from the
+model's proposal. Choose **Inspect a recorded live run** to inspect the captured evidence
+without spending inference credits, or run the clearly labeled offline policy.
+
+Download a capsule and independently recompute it without a model or API key:
+
+```sh
+python scripts/replay_capsule.py frontend/examples/cache-capsule-live.json
+```
+
+The checker verifies the committed challenge seed, benchmark source, every attempted
+configuration, raw paired rounds, decisions and winner. The digest checks consistency;
+it is not an authenticity signature. See [the lab protocol](docs/COUNTEREXAMPLE_LAB.md).
+
+For a free public deployment, use [the deployment guide](docs/FREE_DEPLOYMENT.md).
+The `judge` profile exposes the controlled lab and restricts the repository workbench.
+Live lab inference defaults **off** and requires an explicit quota and host-managed secrets.
 
 ## Explore the experiment engine
 

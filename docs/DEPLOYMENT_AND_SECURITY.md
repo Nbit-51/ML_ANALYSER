@@ -1,5 +1,14 @@
 # Deployment and security notes
 
+## Public judge lab
+
+The controlled `/lab` experience can be deployed separately from unrestricted local
+repository execution. `scripts/serve.py` defaults to `deployment_mode=judge`, blocking
+repository/run APIs without a ready OAuth setup and an allowed account. The public lab
+runs only committed, bounded cache logic; it accepts no visitor code. Live inference
+defaults off. See [free deployment](FREE_DEPLOYMENT.md) and [the lab protocol](COUNTEREXAMPLE_LAB.md)
+for quotas, explicit model opt-in, replay and ephemeral-storage limits.
+
 ## Current deployment profile
 
 The application is suitable for a controlled local demonstration with the committed fixtures. Install with `pip install -e ".[dev]"`, keep `ML_ANALYSER_MODEL_PROVIDER=mock` until credentials are available, and start with `uvicorn ml_analyser.main:app --app-dir backend --host 127.0.0.1 --port 8000`. Open `/app` for the workbench. SQLite state and isolated run copies are stored under ignored `artifacts/` by default.
