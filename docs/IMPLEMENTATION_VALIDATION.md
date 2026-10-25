@@ -218,3 +218,40 @@ Modified: landing/workbench HTML, onboarding/analysis/session/app scripts, workb
   an empty warning/error console. Its inference provider is explicitly distinct from
   the hosted live campaign. Hosted classifier completion and logout/relogin should be
   checked through the owner's browser after publishing the corrected approval view.
+
+## 2026-10-25 — prediction comparison and Regression Radar
+
+- Added public `/evaluate` for paired classification/regression predictions from any
+  framework. No manifest, model upload, inference credits or repository code execution.
+  It computes macro/weighted classification scores, confusion matrices, MAE/RMSE/R²,
+  cohort/class guardrails and an approximate paired bootstrap interval.
+- Final Linux suite: **206 passed, 94.54% coverage**, including real sandbox execution.
+  An earlier Windows suite passed **188 tests with 16 Linux-only skips, 92.77% coverage**;
+  subsequent numerical-boundary and sampling-invariance cases passed in the final Linux
+  suite and targeted Windows run. The prediction module has **29 focused test cases**.
+- **34 frontend tests passed**; Ruff lint/format, strict mypy (61 modules) and JavaScript
+  syntax checks passed. Tests cover dataset changes during pending requests and blocking
+  comparison while a new CSV/example is loading.
+- An initial concurrent Windows/Linux run made one existing HTTP benchmark return
+  inconclusive for high variance. Isolated reruns passed; reliability thresholds were
+  retained. Latency tests still depend on the execution environment.
+- Browser: synthetic classifier improvement accepted (accuracy/F1 0.70 → 0.94); hidden
+  mobile regression rejected despite overall accuracy 0.78 → 0.90; forecast RMSE 8 → 2
+  accepted; a 20-row uncertain improvement remained inconclusive. Console errors/warnings
+  were empty. A 390-pixel phone viewport had no document-wide horizontal overflow; its
+  temporary override was reset after inspection.
+- An actual browser-downloaded report replayed against its CSV. Changed measurements and
+  changed CSV identifiers failed replay. The final canonical sampling engine also passed
+  API-to-CLI replay for all three examples through `check_deployment.py --predictions`.
+  Row ordering and sample-ID changes cannot alter the bootstrap interval, while the
+  provenance digest still detects changed input. Tiny positive thresholds and zero
+  regression tolerance are preserved without a fixed absolute epsilon.
+- A local maximum-size comparison processed **5,000 rows in 1.036 seconds**. This is one
+  local observation, not a hosted latency guarantee. UTF-8 bytes, rows, labels, cohorts,
+  cells and numeric ranges are bounded; one calculation slot per process rejects
+  concurrent comparisons with 429. Endpoint tests verify no uploaded data files appear.
+- The endpoint persists neither uploaded rows nor reports and does not call a model.
+  Exports contain class/cohort names and aggregate measurements, not sample IDs/raw rows.
+  Source/data/report hashes check consistency rather than authenticity. Assumptions and
+  unmeasured properties are displayed with every report; see
+  [prediction protocol and limits](PREDICTION_COMPARISON.md).

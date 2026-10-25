@@ -42,6 +42,10 @@ def create_app() -> FastAPI:
         async def counterexample_lab() -> FileResponse:
             return FileResponse(frontend_root / "lab.html")
 
+        @application.get("/evaluate", include_in_schema=False)
+        async def prediction_comparison() -> FileResponse:
+            return FileResponse(frontend_root / "evaluate.html")
+
     @application.get("/status", tags=["service"])
     async def service_root() -> dict[str, str]:
         return {

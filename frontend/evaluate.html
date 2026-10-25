@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Compare model predictions, find hidden cohort regressions and export reproducible evidence.">
+  <title>Prediction comparison | ML Analyser</title>
+  <link rel="stylesheet" href="/static/evaluate.css">
+  <script src="/static/evaluate.js" defer></script>
+</head>
+<body>
+  <header><a class="brand" href="/">ML_ANALYSER <span>/ PREDICTION COMPARISON</span></a><nav aria-label="Main navigation"><a href="/lab">Cache lab</a><a href="/app">Repository workbench ↗</a></nav></header>
+  <main>
+    <section class="hero">
+      <p class="eyebrow">FROM ANY MODEL. ON THE SAME EXAMPLES.</p>
+      <h1>A better score.<br><em>Any hidden regressions?</em></h1>
+      <p class="lede">Compare baseline and candidate predictions on your labeled data. Check overall quality, uncertainty, and the cohorts a headline score can hide.</p>
+      <div class="use-cases"><span>Text & image classification</span><span>Demand & price forecasts</span><span>Model migrations</span></div>
+      <p class="scope">Works with exported predictions from any framework or repository. No manifest, model upload or API key required. This evaluates predictions; it does not train or run the model.</p>
+    </section>
+    <div class="input-grid">
+      <section class="card">
+        <p class="eyebrow">01 / YOUR PAIRED OUTPUTS</p><h2>Same examples.<br>Two sets of predictions.</h2>
+        <p>Use one CSV with <code>actual,baseline,candidate</code>. Add <code>cohort</code> to compare segments such as device, region or input type. An optional <code>id</code> must be unique.</p>
+        <p class="small"><a href="/static/examples/predictions-classification-improvement.csv" download>Classification CSV template ↓</a> · <a href="/static/examples/predictions-regression-improvement.csv" download>Regression CSV template ↓</a></p>
+        <label for="prediction-file" class="file-label">Choose a CSV <input id="prediction-file" type="file" accept=".csv,text/csv"></label>
+        <p class="small" id="file-status">Up to 5,000 rows, 2 MB, 20 classes and 20 cohorts.</p>
+        <div class="examples" aria-label="Illustrative prediction examples"><button type="button" data-example="classification-improvement">Try an improvement</button><button type="button" data-example="hidden-regression">Find a hidden regression</button><button type="button" data-example="regression-improvement">Compare forecasts</button></div>
+        <p class="small">Examples contain synthetic outputs to demonstrate the checks. Their scores are calculated from those rows.</p>
+        <label for="prediction-csv">CSV contents</label><textarea id="prediction-csv" rows="9" maxlength="2000000" spellcheck="false" placeholder="actual,baseline,candidate,cohort&#10;positive,negative,positive,mobile&#10;negative,negative,negative,desktop"></textarea>
+        <p class="small privacy">CSV rows are processed for this request, not stored or sent to an AI provider. Downloaded reports contain class/cohort names and metrics; review them before sharing.</p>
+      </section>
+      <section class="card">
+        <p class="eyebrow">02 / DEFINE A PASS</p><h2>Make the decision<br>before seeing the score.</h2>
+        <form id="prediction-form">
+          <label for="prediction-task">Task</label><select id="prediction-task"><option value="classification">Classification · predicted labels</option><option value="regression">Regression · numeric predictions</option></select>
+          <label for="prediction-metric">Primary metric</label><select id="prediction-metric"><option value="f1_macro">Macro F1 · higher is better</option><option value="accuracy">Accuracy · higher is better</option></select>
+          <p id="metric-explanation" class="small"></p>
+          <label for="minimum-improvement">Minimum overall improvement</label><input id="minimum-improvement" type="number" min="0" step="any" value="0.01" required>
+          <label for="maximum-regression" id="regression-label">Maximum cohort accuracy / class recall drop</label><input id="maximum-regression" type="number" min="0" step="any" value="0.02" required>
+          <p id="regression-explanation" class="small">0.02 allows a drop of two percentage points. A supported cohort or class can reject an otherwise improved model.</p>
+          <label for="minimum-slice-size">Minimum examples per cohort / class</label><input id="minimum-slice-size" type="number" min="5" max="1000" step="1" value="10" required>
+          <p class="small">Small slices and uncertain improvements produce an inconclusive result. A failed observed guardrail produces rejection.</p>
+          <button id="compare-predictions" class="primary" type="submit">Compare predictions <span>↗</span></button>
+        </form>
+        <p id="comparison-status" role="status" aria-live="polite"></p><p id="comparison-error" class="error hidden" role="alert"></p>
+      </section>
+    </div>
+    <section id="comparison-results" class="hidden" aria-labelledby="comparison-title">
+      <div class="result-heading"><div><p class="eyebrow">03 / MEASURED EVIDENCE</p><h2 id="comparison-title">Comparison report</h2></div><span id="comparison-verdict" class="verdict"></span></div>
+      <div class="card decision-card"><p id="comparison-reasons"></p><p id="improvement-interval"></p><p class="small">Approximate 95% paired bootstrap interval · 200 resamples · positive values mean improvement. Independent rows are assumed; this is not proof of future performance.</p><button id="export-comparison" type="button">Download report JSON ↓</button></div>
+      <div id="prediction-metrics" class="metric-grid"></div>
+      <section class="card"><p class="eyebrow">REGRESSION RADAR</p><h2>Who gained? Who lost?</h2><p id="slice-summary"></p><div id="prediction-slices" class="table-scroll"></div></section>
+      <section id="confusion-section" class="card hidden"><p class="eyebrow">CLASSIFICATION ERRORS</p><h2>See which labels changed.</h2><p>Rows are actual labels; columns are predicted labels. Counts use the same examples for both models.</p><div id="prediction-confusion" class="matrix-grid"></div></section>
+      <section class="card"><p class="eyebrow">REPRODUCE THE DECISION</p><h2>Keep the evidence.</h2><p>The exported report includes the data digest, rules, measurements and implementation digest. Keep your CSV separately to recompute every result.</p><pre>python scripts/replay_predictions.py report.json predictions.csv</pre><p class="small">Digests check consistency, not authorship. A replay requires the matching implementation version.</p><details><summary>Methodology and limits</summary><ul id="prediction-limitations"></ul><p id="prediction-provenance" class="small"></p></details></section>
+    </section>
+  </main>
+  <footer>ML Analyser · Measured outcomes. Traceable decisions.</footer>
+</body>
+</html>

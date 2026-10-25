@@ -85,6 +85,7 @@ jobs:
           node --check frontend/analytics.js
           node --check frontend/workbench.js
           node --check frontend/plans.js
+          node --check frontend/evaluate.js
           node --check frontend/onboarding.js
           node --check frontend/session.js
           node --check frontend/history.js
@@ -121,6 +122,17 @@ jobs:
 
           with httpx.Client(base_url="http://127.0.0.1:8000") as client:
               assert client.get("/lab").status_code == 200
+              assert client.get("/evaluate").status_code == 200
+              prediction_csv = client.get(
+                  "/static/examples/predictions-hidden-regression.csv"
+              ).text
+              prediction = client.post("/api/v1/evaluation/compare", json={
+                  "task": "classification", "primary_metric": "f1_macro",
+                  "csv_text": prediction_csv,
+              })
+              assert prediction.status_code == 200, prediction.text
+              assert prediction.json()["decision"] == "rejected"
+              assert prediction.json()["candidate"]["accuracy"] > prediction.json()["baseline"]["accuracy"]
               assert client.get("/api/v1/lab/status").json()["live_available"] is False
               assert client.post("/api/v1/runs/prepare", json={}).status_code == 403
               prepared = client.post("/api/v1/lab/prepare", json={}).json()

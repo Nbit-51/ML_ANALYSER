@@ -57,6 +57,7 @@ From an installed local checkout:
 
 ```sh
 python scripts/check_deployment.py https://ml-analyser.onrender.com --exercise-lab
+python scripts/check_deployment.py https://ml-analyser.onrender.com --predictions
 ```
 
 This checks health, the callback origin, anonymous workspace restrictions, real offline

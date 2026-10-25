@@ -4,6 +4,7 @@ from fastapi import APIRouter
 
 from ml_analyser.api.routes.auth import router as auth_router
 from ml_analyser.api.routes.benchmarks import router as benchmarks_router
+from ml_analyser.api.routes.evaluation import router as evaluation_router
 from ml_analyser.api.routes.health import router as health_router
 from ml_analyser.api.routes.lab import router as lab_router
 from ml_analyser.api.routes.repositories import router as repositories_router
@@ -17,3 +18,4 @@ api_router.include_router(benchmarks_router)
 api_router.include_router(auth_router)
 api_router.include_router(repositories_router)
 api_router.include_router(lab_router)
+api_router.include_router(evaluation_router)

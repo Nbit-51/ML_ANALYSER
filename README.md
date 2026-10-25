@@ -13,6 +13,20 @@ Set a goal such as **lower validation RMSE** or **reduce P95 latency without cha
 
 **Nemotron reasons. Adapters measure. Deterministic rules decide.**
 
+## Compare models from any project
+
+Open **`/evaluate`** and supply a CSV of paired ground truth, baseline and candidate
+predictions. Compare classifiers with F1/precision/recall and confusion matrices, or
+regressors with MAE/RMSE. **Regression Radar** checks cohorts and class recall so a better
+overall score cannot silently hide a failing segment. A paired bootstrap interval can
+make an uncertain improvement inconclusive. No manifest, model upload or API key is needed.
+
+Try **Find a hidden regression**: overall accuracy rises **78% → 90%**, but mobile accuracy
+falls **90% → 60%**; the guardrail rejects the candidate. Export a report and recompute it
+against your CSV using `python scripts/replay_predictions.py report.json predictions.csv`.
+This evaluates supplied predictions; it does not train models or benchmark inference speed.
+See [format, use cases and statistical limits](docs/PREDICTION_COMPARISON.md).
+
 ## Start with the Counterexample Lab
 
 Open **`/lab`** for the public judge experience. NVIDIA Nemotron proposes a bounded cache
@@ -138,7 +152,7 @@ python -m pytest --cov=ml_analyser --cov-report=term-missing --cov-fail-under=90
 node --test frontend/*.test.js
 ```
 
-Latest full backend validation: **176 Linux tests passed, 94.27% coverage**. The approval-review update passed **17 affected backend tests and all 30 frontend tests**. A live Nebius test imported this public repository and measured classifier F1 **0.667 → 1.000** on its small fixture dataset, with recall/accuracy guardrails satisfied. This validates the integration, not generalization to other datasets. See [validation evidence](docs/IMPLEMENTATION_VALIDATION.md). CI also checks JavaScript syntax and the packaged container.
+Latest validation: **206 Linux tests passed, 94.54% coverage; all 34 frontend tests passed**. Browser checks cover accepted, rejected and inconclusive prediction comparisons, report export/replay and mobile layout. A live Nebius test imported this public repository and measured classifier F1 **0.667 → 1.000** on its small fixture dataset, with recall/accuracy guardrails satisfied. This validates the integration, not generalization to other datasets. See [validation evidence](docs/IMPLEMENTATION_VALIDATION.md). CI also checks JavaScript syntax and the packaged container.
 
 ## Boundaries
 

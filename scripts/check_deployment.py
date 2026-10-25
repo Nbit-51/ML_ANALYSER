@@ -11,10 +11,22 @@ from uuid import UUID
 
 import httpx
 
+from ml_analyser.evaluation.predictions import (
+    PredictionReport,
+    PredictionRequest,
+    compare_predictions,
+)
 from ml_analyser.lab.engine import replay
 
 
-def check(base_url: str, *, mode: str | None, require_connections: bool, output: Path) -> int:
+def check(
+    base_url: str,
+    *,
+    mode: str | None,
+    require_connections: bool,
+    output: Path,
+    predictions: bool = False,
+) -> int:
     origin = urlsplit(base_url)
     if (
         origin.scheme not in {"https", "http"}
@@ -51,6 +63,37 @@ def check(base_url: str, *, mode: str | None, require_connections: bool, output:
             assert app.status_code == 303 and app.headers["location"] == "/login"
             assert client.get("/api/v1/runs/history").status_code in {401, 403}
             checks["anonymous_workspace_boundary"] = "passed"
+        if predictions:
+            assert client.get("/evaluate").status_code == 200
+            prediction_checks = {}
+            for name, task, expected in (
+                ("classification-improvement", "classification", "accepted"),
+                ("hidden-regression", "classification", "rejected"),
+                ("regression-improvement", "regression", "accepted"),
+            ):
+                example = client.get(f"/static/examples/predictions-{name}.csv")
+                example.raise_for_status()
+                request = PredictionRequest.model_validate(
+                    {
+                        "task": task,
+                        "csv_text": example.text,
+                        "primary_metric": "f1_macro" if task == "classification" else "rmse",
+                        "minimum_improvement": 0.01 if task == "classification" else 0.1,
+                        "maximum_slice_regression": 0.02 if task == "classification" else 0.1,
+                    }
+                )
+                response = client.post("/api/v1/evaluation/compare", json=request.model_dump())
+                response.raise_for_status()
+                report = PredictionReport.model_validate(response.json())
+                assert report.decision == expected, name
+                assert compare_predictions(request) == report, f"Prediction replay differs: {name}"
+                output.mkdir(parents=True, exist_ok=True)
+                (output / f"prediction-{name}-{report.report_sha256[:12]}.json").write_text(
+                    report.model_dump_json(indent=2) + "\n",
+                    encoding="utf-8",
+                )
+                prediction_checks[name] = report.decision
+            checks["prediction_comparison_and_independent_replay"] = prediction_checks
         if mode:
             if mode == "live" and not state["live_lab_enabled"]:
                 raise ValueError(
@@ -108,6 +151,11 @@ def main() -> int:
         help="Opt in to a live campaign using hosted Nebius credits",
     )
     parser.add_argument("--require-connections", action="store_true")
+    parser.add_argument(
+        "--predictions",
+        action="store_true",
+        help="Compare and replay all three prediction examples without inference",
+    )
     parser.add_argument("--output", type=Path, default=Path("artifacts/connection-checks"))
     args = parser.parse_args()
     try:
@@ -116,6 +164,7 @@ def main() -> int:
             mode="live" if args.live_lab else "offline" if args.exercise_lab else None,
             require_connections=args.require_connections,
             output=args.output,
+            predictions=args.predictions,
         )
     except (httpx.HTTPError, ValueError, KeyError, TypeError, AssertionError) as error:
         print(f"Deployment check failed: {type(error).__name__}: {error}")
