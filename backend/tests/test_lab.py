@@ -179,7 +179,7 @@ def test_judge_profile_blocks_repository_execution_but_serves_lab(
 ) -> None:
     monkeypatch.setenv("ML_ANALYSER_DEPLOYMENT_MODE", "judge")
     get_settings.cache_clear()
-    assert "A faster answer." in client.get("/lab").text
+    assert "Reduce repeated work." in client.get("/lab").text
     assert client.get("/app", follow_redirects=False).headers["location"] == "/lab"
     for endpoint in (
         "/runs/prepare",

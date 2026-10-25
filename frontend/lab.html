@@ -10,45 +10,46 @@
   <header><a class="brand" href="/">ML_ANALYSER <span>/ COUNTEREXAMPLE LAB</span></a><a href="/app">Repository workbench ↗</a></header>
   <main>
     <section class="intro">
-      <p class="eyebrow">NVIDIA NEMOTRON × NEBIUS TOKEN FACTORY</p>
-      <h1>A faster answer.<br><em>But is it still correct?</em></h1>
-      <p class="lede">An AI agent optimizes a pricing cache. A separate verifier challenges every candidate with new tenants and currencies. Incorrect quotes become concrete feedback for the next revision.</p>
-      <div class="flow" aria-label="Experiment workflow"><span>01 · Propose</span><i>→</i><span>02 · Approve</span><i>→</i><span>03 · Challenge</span><i>→</i><span>04 · Revise</span><i>→</i><span>05 · Replay</span></div>
+      <p class="eyebrow">EXPERIMENT LAB</p>
+      <h1>Reduce repeated work.<br><em>Keep every answer correct.</em></h1>
+      <p class="lede">Compare cache settings using a pricing example. See how many calculations each setting needs, check for incorrect prices, and save the results.</p>
+      <div class="flow" aria-label="Experiment workflow"><span>01 · Review</span><i>→</i><span>02 · Approve</span><i>→</i><span>03 · Compare</span><i>→</i><span>04 · Refine</span><i>→</i><span>05 · Export</span></div>
     </section>
     <div class="setup-grid">
       <section class="card">
-        <p class="eyebrow">THE ENGINEERING PROBLEM</p><h2>A cache key can hide a regression.</h2>
-        <p>Caching by product alone looks effective in a single-tenant test. In a shared service, the same product can have different prices for each tenant and currency.</p>
-        <dl class="contract"><div><dt>Improve</dt><dd>Fewer reference lookups <small>↓ Lower is better</small></dd></div><div><dt>Preserve</dt><dd>Zero incorrect prices <small>Exact reference comparison</small></dd></div><div><dt>Budget</dt><dd>Up to 3 proposals <small>3 paired rounds per proposal</small></dd></div></dl>
-        <details><summary>What is actually executed?</summary><p>The committed Python cache implementation runs on synthetic queries. The agent chooses among three cache-key fields. No visitor code, shell commands, dependencies, or production data are executed. Lookup counts are measured work units, not claimed latency or dollars saved.</p><a href="https://github.com/Nbit-51/ML_ANALYSER/blob/main/backend/ml_analyser/lab/workload.py" target="_blank" rel="noreferrer">Read the benchmark source ↗</a></details>
+        <p class="eyebrow">PRICING CACHE EXAMPLE</p><h2>Reuse prices without mixing them up.</h2>
+        <p>The same product can have different prices for each organization and currency. This example checks whether a cache reduces calculations while keeping those prices correct.</p>
+        <dl class="contract"><div><dt>Goal</dt><dd>Fewer price calculations <small>↓ Lower is better</small></dd></div><div><dt>Required check</dt><dd>Every price must match <small>Compared with the uncached result</small></dd></div><div><dt>Run limit</dt><dd>Up to 3 configurations <small>Each compared 3 times</small></dd></div></dl>
+        <details><summary>About this example</summary><p>Tests use generated pricing queries and the included Python cache. Only cache-key settings change. Calculation counts describe work performed in this example; they do not measure response time or cost savings.</p><a href="https://github.com/Nbit-51/ML_ANALYSER/blob/main/backend/ml_analyser/lab/workload.py" target="_blank" rel="noreferrer">View the example code ↗</a></details>
       </section>
       <section class="card setup">
-        <p class="eyebrow">START A REAL MEASUREMENT</p><h2>Choose the proposal source.</h2>
-        <label for="lab-mode">Reasoning provider</label>
-        <select id="lab-mode"><option value="offline">Offline scripted policy · no inference credits</option><option value="live" disabled>NVIDIA Nemotron on Nebius · checking configuration…</option></select>
-        <p id="provider-status" class="muted">Checking live model availability…</p>
-        <button id="prepare" class="primary" type="button">Prepare the first proposal <span>↗</span></button>
-        <button id="recorded" type="button">Inspect a recorded live run</button>
-        <p class="muted">Preparation can call the selected model. Benchmark execution waits for your approval. Offline mode runs the same verifier with clearly labeled scripted choices.</p>
-        <p id="lab-status" role="status" aria-live="polite">Ready to prepare.</p>
+        <p class="eyebrow">NEW EXPERIMENT</p><h2>Choose how to get suggestions.</h2>
+        <label for="lab-mode">Configuration suggestions</label>
+        <select id="lab-mode"><option value="offline">Example configurations · no AI</option><option value="live" disabled>AI suggestions · checking availability…</option></select>
+        <p id="provider-status" class="muted">Checking available options…</p>
+        <button id="prepare" class="primary" type="button">Review configuration <span>↗</span></button>
+        <button id="recorded" type="button">Open sample report</button>
+        <details><summary>About configuration suggestions</summary><p>Example configurations follow a preset sequence without a model request. AI suggestions use NVIDIA Nemotron through Nebius Token Factory to read the cache source and suggest settings. You review the first configuration before any tests run.</p><p id="provider-details" class="muted"></p></details>
+        <p id="lab-status" role="status" aria-live="polite"></p>
         <p id="lab-error" class="error hidden" role="alert"></p>
       </section>
     </div>
     <section id="review" class="card hidden">
-      <p class="eyebrow">REVIEW THE BOUNDED CAMPAIGN</p><h2>Approve the scope. Inspect the outcome.</h2>
-      <p id="proposal-rationale"></p><pre id="proposal-config"></pre>
-      <p>The challenge seed is committed before approval and revealed in the downloaded evidence. Each revision receives a fresh generated workload. Earlier counterexamples may inform later proposals.</p>
-      <div class="hash-row"><span>CHALLENGE COMMITMENT</span><code id="commitment"></code></div>
-      <details><summary>Inspect the exact reference source</summary><pre id="lab-source"></pre></details>
-      <button id="approve" class="primary" type="button">Approve and run up to 3 attempts <span>→</span></button>
+      <p class="eyebrow">REVIEW CONFIGURATION</p><h2>Check the settings before running.</h2>
+      <p>Prices will be cached using these fields:</p><pre id="proposal-config"></pre>
+      <p>This experiment can test up to three configurations. Each must reduce calculations and return the correct price for every query.</p>
+      <details><summary>Suggestion notes</summary><p id="proposal-rationale"></p></details>
+      <details><summary>How test cases are selected</summary><p>A random seed is committed before approval and included with your report. Each configuration receives fresh generated cases. Results from earlier configurations can inform later suggestions.</p><div class="hash-row"><span>TEST SEED COMMITMENT</span><code id="commitment"></code></div></details>
+      <details><summary>View the reference code</summary><pre id="lab-source"></pre></details>
+      <button id="approve" class="primary" type="button">Approve and run experiment <span>→</span></button>
     </section>
     <section id="results" class="hidden" aria-live="polite">
-      <div class="results-heading"><div><p class="eyebrow">OBSERVED EVIDENCE</p><h2 id="result-title">Campaign results</h2></div><button id="download" type="button">Download replay capsule ↓</button></div>
-      <p id="evidence-mode" class="eyebrow"></p><p id="result-summary"></p><p id="result-provider" class="muted"></p>
+      <div class="results-heading"><div><p class="eyebrow">EXPERIMENT RESULTS</p><h2 id="result-title">Results</h2></div><button id="download" type="button">Download report ↓</button></div>
+      <p id="evidence-mode" class="eyebrow"></p><p id="result-summary"></p><details><summary>Run details</summary><p id="result-provider" class="muted"></p><p id="stop-reason" class="muted"></p></details>
       <div class="evidence-grid"><section id="negative-control" class="card control"></section>
       <div id="attempts"></div></div>
-      <section class="card"><p class="eyebrow">VERIFY WITHOUT TRUSTING THE MODEL</p><h3>Replay every decision on your own machine.</h3><p>After installing this repository, download the capsule and run:</p><pre>python scripts/replay_capsule.py path/to/capsule.json</pre><p>The checker regenerates the workload and independently recomputes every result. A digest detects inconsistent edits; it does not prove who produced the file.</p><details><summary>Scope and limitations</summary><ul id="limitations"></ul></details></section>
+      <section class="card"><p class="eyebrow">SAVE AND REPRODUCE</p><h3>Check the result on your own machine.</h3><p>The downloaded report includes the settings, test seed and measurements.</p><details><summary>How to reproduce this result</summary><p>Install this repository, then run:</p><pre>python scripts/replay_capsule.py path/to/report.json</pre><p>The checker regenerates the test cases and recomputes the results without an AI request. Its digest checks file consistency, not authorship.</p></details><details><summary>Method and limitations</summary><ul id="limitations"></ul></details></section>
     </section>
   </main>
-  <footer><span>NEMOTRON PROPOSES. PYTHON MEASURES. RULES DECIDE.</span><a href="https://github.com/Nbit-51/ML_ANALYSER">Source code ↗</a></footer>
+  <footer><span>ML Analyser · Counterexample Lab</span><a href="https://github.com/Nbit-51/ML_ANALYSER">Source code ↗</a></footer>
 </body></html>
