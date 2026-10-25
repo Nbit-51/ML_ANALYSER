@@ -141,8 +141,13 @@ class NebiusTokenFactoryProvider:
                         "excerpt explicitly shows it. When uncertain, propose a diagnostic check "
                         "rather than a concrete code change. Do not treat an inventory path as "
                         "proof of that file's behavior. "
-                        "If an evidence item declares the ml_training adapter, include an "
-                        "optimization hypothesis about the declared configuration intervention. "
+                        "When evidence declares candidate_overrides or a benchmark manifest, "
+                        "the candidate configuration is fixed. Reason about exactly those "
+                        "declared values; do not invent a different baseline, override value, "
+                        "minimum improvement or acceptance rule. Model prose cannot change the "
+                        "success contract or executable plan. If an evidence item declares the "
+                        "ml_training adapter, include an optimization hypothesis about that "
+                        "declared intervention. "
                         "For every hypothesis, expected_outcome.metric MUST exactly equal "
                         "success_contract.objective.metric, and expected_outcome.direction MUST "
                         "equal success_contract.objective.direction. Mention other metrics only "
@@ -182,3 +187,10 @@ class NebiusTokenFactoryProvider:
                 raise ProviderResponseError("Nebius hypothesis referenced unobserved evidence")
             if hypothesis.expected_outcome.metric.casefold() != objective_metric:
                 raise ProviderResponseError("Nebius hypothesis used a metric outside the objective")
+            if (
+                hypothesis.expected_outcome.direction
+                != context.success_contract.objective.direction
+            ):
+                raise ProviderResponseError(
+                    "Nebius hypothesis contradicted the objective direction"
+                )

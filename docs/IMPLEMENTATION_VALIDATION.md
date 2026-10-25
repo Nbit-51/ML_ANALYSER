@@ -187,3 +187,34 @@ Modified: landing/workbench HTML, onboarding/analysis/session/app scripts, workb
 - Deployment checks are reproducible through `scripts/check_deployment.py`; see
   [connection setup](CONNECTIONS.md). Actual hosted OAuth sign-in remains a manual check
   after the owner saves the registered app's credentials in the host environment.
+
+## 2026-10-25 — deployed connections and approval review
+
+- The public Render app reports GitHub and Nebius configured, correct HTTPS callback,
+  judge mode, no local-demo bypass and a daily live-campaign limit of six.
+- Actual GitHub OAuth completed in the owner's browser and returned to `/app` as
+  `@Nbit-51`. Public GitHub import and nested classifier discovery/preview succeeded.
+- A real hosted Nebius campaign used two model calls: the first proposal reduced work
+  but failed correctness and was rejected; revision two passed with **120 → 30** reference
+  lookups. Independent local replay, approval tampering denial and approval reuse denial
+  passed. This is the controlled synthetic lab, separately from the classifier evaluation.
+- Hosted page/assets, anonymous repository/history restrictions, OAuth PKCE/Secure/HttpOnly
+  cookie configuration, invalid-state rejection and cross-origin execution denial passed.
+- Browser review found a real inconsistency: model prose proposed learning rate 0.05
+  while the executable manifest set 0.2. Approval now derives exact changes from the
+  manifest and acceptance criteria from the success contract. Raw model text is retained
+  as unverified context and cannot supply the displayed execution or rejection rules.
+  The provider prompt now requires declared candidate values and rejects a response
+  that contradicts the requested improvement direction.
+- Regression coverage: **17 affected backend tests and all 30 frontend tests passed**,
+  including a conflicting-model-prose case, minimization, zero targets and typed overrides.
+  Ruff lint/format and mypy passed.
+- Browser testing also found a race: opening a saved report while automatic project
+  restoration was pending could hide the results panel. A newly displayed result now
+  cancels stale restoration; tests exercise delayed project-list and manifest responses
+  and verify that intentional project selection still clears the previous result.
+- A separate local browser with mock reasoning verified nested selection after reload,
+  actual classifier execution (**F1 0.6666666667 → 1.0**), report persistence/reopening and
+  an empty warning/error console. Its inference provider is explicitly distinct from
+  the hosted live campaign. Hosted classifier completion and logout/relogin should be
+  checked through the owner's browser after publishing the corrected approval view.

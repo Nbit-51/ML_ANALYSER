@@ -103,13 +103,17 @@ function renderTimeline(events = []) {
 function renderPlan() {
   $("run-panel").classList.remove("hidden");
   const plan = prepared.plan;
+  const review = describeExecutionPlan(plan);
   $("plan-review").classList.remove("hidden");
   $("plan-title").textContent = plan.experiment.title;
   $("hypothesis").textContent = plan.hypothesis.statement;
-  $("rejection").textContent = plan.hypothesis.rejection_criteria;
+  $("model-rejection").textContent = plan.hypothesis.rejection_criteria;
+  $("plan-summary").textContent = review.summary;
+  $("rejection").textContent = review.verdictRule;
+  $("acceptance-criteria").replaceChildren(...review.criteria.map(rule => element("li", rule)));
   $("risk-pill").textContent = `${prepared.approval.risk_level.toUpperCase()} RISK`;
   $("run-id").textContent = plan.run_id.slice(0, 8);
-  $("changes").replaceChildren(...plan.experiment.change_summary.map((change) => element("li", change)));
+  $("changes").replaceChildren(...review.changes.map((change) => element("li", change)));
   $("plan-json").textContent = JSON.stringify(plan, null, 2);
   const readiness = prepared.repository_summary?.adapters.find(a => a.adapter === prepared.adapter);
   $("approve-button").disabled = readiness?.status !== "supported_and_executable";

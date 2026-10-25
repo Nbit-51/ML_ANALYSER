@@ -84,6 +84,7 @@ jobs:
           node --check frontend/metrics.js
           node --check frontend/analytics.js
           node --check frontend/workbench.js
+          node --check frontend/plans.js
           node --check frontend/onboarding.js
           node --check frontend/session.js
           node --check frontend/history.js

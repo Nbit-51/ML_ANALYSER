@@ -8,6 +8,7 @@
   <script src="/static/metrics.js" defer></script>
   <script src="/static/analytics.js" defer></script>
   <script src="/static/workbench.js" defer></script>
+  <script src="/static/plans.js" defer></script>
   <script src="/static/app.js" defer></script>
   <script src="/static/analysis.js" defer></script>
   <script src="/static/onboarding.js" defer></script>
@@ -144,9 +145,10 @@
         <div id="plan-review" class="plan-review hidden">
           <div class="review-header"><span>PLAN READY FOR REVIEW</span><span id="risk-pill" class="risk-pill"></span></div>
           <h3 id="plan-title"></h3>
-          <p id="hypothesis"></p>
-          <div class="plan-detail"><strong>Proposed change</strong><ul id="changes"></ul></div>
-          <div class="plan-detail"><strong>Rejection rule</strong><p id="rejection"></p></div>
+          <p id="plan-summary"></p>
+          <div class="plan-detail"><strong>Exact declared changes</strong><ul id="changes"></ul></div>
+          <div class="plan-detail"><strong>Measured acceptance criteria</strong><ul id="acceptance-criteria"></ul><p id="rejection"></p></div>
+          <details><summary>Model suggestion · unverified context</summary><p class="help-text">The model may suggest a different experiment. This approval executes the declared changes above and evaluates the displayed success contract.</p><p id="hypothesis"></p><p id="model-rejection"></p></details>
           <details><summary>Exact command, configuration, contract and approval scope</summary><pre id="plan-json"></pre></details>
           <p id="execution-readiness" class="fine-print"></p>
           <button class="approve-button" id="approve-button" type="button">Approve exact plan & start <span>→</span></button>

@@ -78,7 +78,7 @@ flowchart TD
 - **Repository understanding:** source-byte language composition, detected capabilities and explicit execution readiness.
 - **Measurement quality:** baseline/candidate charts, absolute and percentage deltas, raw-sample distributions and variability.
 - **Decision traceability:** objective and guardrail status, selectable experiment lineage, evidence records and persisted reports.
-- **Controlled changes:** manifest-declared JSON configuration edits, fingerprint-bound approval and separate workspaces. The original repository stays unchanged.
+- **Controlled changes:** manifest-declared JSON configuration edits, fingerprint-bound approval and separate workspaces. Approval shows the exact executable changes and deterministic contract rules; model suggestions are labeled context. The original repository stays unchanged.
 
 ```mermaid
 flowchart LR
@@ -138,7 +138,7 @@ python -m pytest --cov=ml_analyser --cov-report=term-missing --cov-fail-under=90
 node --test frontend/*.test.js
 ```
 
-Latest validation: **176 Linux tests passed, 94.27% coverage; 25 frontend tests passed.** A live Nebius test imported this public repository and measured classifier F1 **0.667 → 1.000** on its small fixture dataset, with recall/accuracy guardrails satisfied. This validates the integration, not generalization to other datasets. See [validation evidence](docs/IMPLEMENTATION_VALIDATION.md). CI also checks JavaScript syntax and the packaged container.
+Latest full backend validation: **176 Linux tests passed, 94.27% coverage**. The approval-review update passed **17 affected backend tests and all 30 frontend tests**. A live Nebius test imported this public repository and measured classifier F1 **0.667 → 1.000** on its small fixture dataset, with recall/accuracy guardrails satisfied. This validates the integration, not generalization to other datasets. See [validation evidence](docs/IMPLEMENTATION_VALIDATION.md). CI also checks JavaScript syntax and the packaged container.
 
 ## Boundaries
 

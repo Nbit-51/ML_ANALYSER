@@ -117,6 +117,7 @@ def test_nebius_provider_sends_structured_request_and_parses_hypotheses() -> Non
     request_body = json.loads(observed_request.content)
     assert request_body["model"] == "nvidia/test-nemotron"
     assert request_body["temperature"] == 0
+    assert "candidate configuration is fixed" in request_body["messages"][0]["content"]
     assert request_body["response_format"]["type"] == "json_schema"
     assert "train.py" in request_body["messages"][1]["content"]
 
@@ -220,11 +221,20 @@ def test_nebius_provider_surfaces_http_failure() -> None:
         asyncio.run(client.aclose())
 
 
-def test_nebius_provider_rejects_wrong_objective_metric() -> None:
+@pytest.mark.parametrize(
+    ("metric", "direction", "message"),
+    [
+        ("accuracy", MetricDirection.MAXIMIZE, "outside the objective"),
+        ("f1", MetricDirection.MINIMIZE, "objective direction"),
+    ],
+)
+def test_nebius_provider_rejects_wrong_objective(
+    metric: str, direction: MetricDirection, message: str
+) -> None:
     hypothesis = _hypothesis().model_copy(
         update={
             "expected_outcome": MetricExpectation(
-                metric="accuracy", direction=MetricDirection.MAXIMIZE, minimum_delta=0
+                metric=metric, direction=direction, minimum_delta=0
             )
         }
     )
@@ -240,7 +250,7 @@ def test_nebius_provider_rejects_wrong_objective_metric() -> None:
         api_key="test-only-key", model="nvidia/test-nemotron", client=client
     )
     try:
-        with pytest.raises(ProviderResponseError, match="outside the objective"):
+        with pytest.raises(ProviderResponseError, match=message):
             asyncio.run(provider.propose_hypotheses(_context()))
     finally:
         asyncio.run(client.aclose())
