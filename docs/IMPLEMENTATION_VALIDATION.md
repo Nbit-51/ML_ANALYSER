@@ -159,3 +159,31 @@ npm run vendor:landing
 New frontend files: `landing.css`, `landing.mjs`, `engine-data.mjs`, `engine-scene.mjs`, `landing.test.js`, `history.js`, `history.test.js`, and pinned licensed assets in `frontend/vendor/`. New tooling: root `package.json`, `package-lock.json` and `scripts/vendor-landing.cjs`. New design documentation: `docs/VISUAL_SYSTEM.md`.
 
 Modified: landing/workbench HTML, onboarding/analysis/session/app scripts, workbench CSS, adapter readiness and metric models, repository intake, account status, report APIs, SQLite catalog, report compatibility and fingerprint helpers; backend and frontend tests; CI; README and architecture/onboarding/context/validation documentation.
+
+## 2026-10-25 — connection readiness and imported ML evaluation
+
+- Windows: **160 passed, 16 Linux-only skips; 92.40% coverage**. Two upstream warnings.
+- Linux/WSL: **176 passed; 94.27% coverage**, including actual sandbox execution. One upstream warning.
+- Frontend: **25 passed**. Ruff lint/format and strict mypy (58 modules) passed.
+- The OAuth integration tests simulate GitHub transport explicitly, validate returned identity,
+  fail closed on incomplete/empty allowlists and enforce account/session boundaries. They
+  do not claim a real browser OAuth round trip.
+- An imported nested classifier test executes actual Python training, measures F1, verifies
+  accuracy/recall guardrails, preserves source and reopens the persisted normalized report.
+- Live owner validation downloaded the real public GitHub repository using
+  `scripts/validate_repository_flow.py --approve-trusted-code --live`. Nebius served
+  `nvidia/nemotron-3-super-120b-a12b`; measured fixture F1 was **0.6666666667 → 1.0**,
+  both guardrails passed and the candidate was accepted. The original imported source was
+  unchanged and the persisted report reopened identically. This small fixture result
+  establishes integration behavior, not performance on unseen datasets.
+- New `/api/v1/connections` reports settings presence without exposing credential values or
+  claiming connectivity. Public unconfigured workbench access goes to `/login`; hosted
+  login no longer suggests a local-demo bypass or a localhost production callback.
+- Nested manifest discovery is bounded and read-only. Classification defaults explicitly
+  maximize F1/accuracy/precision/recall; unknown custom metric directions remain explicit.
+- Docker now ships the four account starter fixtures. The image CI smoke test seeds them
+  into a temporary account and measures a classifier improvement under the nonroot user.
+  Remote CI/deployment results must be checked on the commit being published.
+- Deployment checks are reproducible through `scripts/check_deployment.py`; see
+  [connection setup](CONNECTIONS.md). Actual hosted OAuth sign-in remains a manual check
+  after the owner saves the registered app's credentials in the host environment.

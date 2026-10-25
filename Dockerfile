@@ -8,6 +8,10 @@ WORKDIR /app
 COPY pyproject.toml README.md LICENSE ./
 COPY backend ./backend
 COPY frontend ./frontend
+COPY workspaces/ml-training-demo ./workspaces/ml-training-demo
+COPY workspaces/ml-regression-demo ./workspaces/ml-regression-demo
+COPY workspaces/backend-benchmark-demo ./workspaces/backend-benchmark-demo
+COPY workspaces/cli-benchmark-demo ./workspaces/cli-benchmark-demo
 COPY scripts/serve.py ./scripts/serve.py
 RUN python -m pip install --no-cache-dir -e . \
     && mkdir -p /app/artifacts /app/workspaces \

@@ -14,6 +14,7 @@ from ml_analyser.core.config import get_request_settings
 from ml_analyser.core.workspace import resolve_project_path
 from ml_analyser.persistence import SQLiteRunStore
 from ml_analyser.tools.import_repository import decode_upload, github_archive, save_files
+from ml_analyser.tools.repository import RepositoryInventoryTool
 
 router = APIRouter(prefix="/repositories", tags=["repositories"])
 
@@ -40,10 +41,16 @@ class ImportResult(StrictModel):
     message: str = "Source copy imported. No project code has been executed."
 
 
+class BenchmarkProject(StrictModel):
+    project_path: str
+    display_name: str
+
+
 class ProjectDetails(StrictModel):
     project_path: str
     adapters: list[AdapterReadiness]
     executed: bool = False
+    benchmark_projects: list[BenchmarkProject] = Field(default_factory=list)
 
 
 def persist_import(
@@ -96,7 +103,30 @@ def saved_repositories() -> list[SavedRepository]:
 def project_details(project_path: str = Query(min_length=1, max_length=500)) -> ProjectDetails:
     try:
         root = resolve_project_path(get_request_settings().workspace_root, project_path)
-        return ProjectDetails(project_path=project_path, adapters=default_registry().describe(root))
+        registry = default_registry()
+        inventory = RepositoryInventoryTool(max_files=1000).inspect(str(root))
+        declared = sorted(
+            {
+                Path(item.path).parent.as_posix()
+                for item in inventory.files
+                if Path(item.path).name in registry.manifest_names
+                and Path(item.path).parent != Path(".")
+            }
+        )[:12]
+        projects = []
+        for relative in declared:
+            nested_path = project_path.rstrip("/") + "/" + relative
+            if len(nested_path) > 500:
+                continue
+            nested = resolve_project_path(get_request_settings().workspace_root, nested_path)
+            readiness = registry.describe(nested)
+            if any(
+                item.status in {"supported_and_executable", "preview_only"} for item in readiness
+            ):
+                projects.append(BenchmarkProject(project_path=nested_path, display_name=relative))
+        return ProjectDetails(
+            project_path=project_path, adapters=registry.describe(root), benchmark_projects=projects
+        )
     except FileNotFoundError as error:
         raise HTTPException(404, "Project no longer exists. Import it again.") from error
     except (OSError, ValueError) as error:

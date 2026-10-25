@@ -2,6 +2,7 @@
 
 import base64
 import hashlib
+import re
 import secrets
 from urllib.parse import urlencode
 
@@ -19,7 +20,7 @@ router = APIRouter(prefix="/auth", tags=["authentication"])
 def auth_status(request: Request) -> dict[str, object]:
     settings = get_settings()
     user = AuthStore(settings.auth_database).user(request.cookies.get("ml_session", ""))
-    allowed = {item.strip().casefold() for item in settings.github_allowed_users.split(",")}
+    allowed = settings.github_allowed_logins
     if not settings.auth_ready or not user or user["login"].casefold() not in allowed:
         user = None
     return {
@@ -28,6 +29,9 @@ def auth_status(request: Request) -> dict[str, object]:
         "user": user,
         "provider": settings.model_provider,
         "callback_url": settings.app_url.rstrip("/") + "/api/v1/auth/callback",
+        "app_url": settings.app_url,
+        "deployment_mode": settings.deployment_mode,
+        "local_demo_available": settings.deployment_mode == "local" and not settings.auth_enabled,
     }
 
 
@@ -89,6 +93,21 @@ async def github_identity(code: str, verifier: str) -> dict[str, object]:
         return body
 
 
+def validate_identity(identity: dict[str, object]) -> tuple[str, str]:
+    if not isinstance(identity, dict):
+        raise ValueError("GitHub returned an invalid account identity")
+    identifier, login = identity.get("id"), identity.get("login")
+    if (
+        not isinstance(identifier, int)
+        or isinstance(identifier, bool)
+        or identifier <= 0
+        or not isinstance(login, str)
+        or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9-]{0,38}", login)
+    ):
+        raise ValueError("GitHub returned an invalid account identity")
+    return str(identifier), login
+
+
 @router.get("/callback")
 async def github_callback(request: Request, code: str = "", state: str = "") -> RedirectResponse:
     settings = get_settings()
@@ -104,8 +123,8 @@ async def github_callback(request: Request, code: str = "", state: str = "") -> 
         raise HTTPException(400, "Sign-in expired or cancelled. Please try again.")
     try:
         identity = await github_identity(code, verifier)
-        user_id, login = str(identity["id"]), str(identity["login"])
-        allowed = {value.strip().casefold() for value in settings.github_allowed_users.split(",")}
+        user_id, login = validate_identity(identity)
+        allowed = settings.github_allowed_logins
         if login.casefold() not in allowed:
             raise HTTPException(403, "This account is not allowed on this installation.")
         seed_demos(account_settings(settings, user_id))

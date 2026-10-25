@@ -110,11 +110,11 @@ To enable live reasoning, copy [.env.example](.env.example) to `.env` **only if 
 
 Choose **My repository** to import a public GitHub URL or select a folder anywhere on your computer. Imports create managed source copies; originals stay unchanged. Local clones from other Git hosts work through folder import. Limits: 1,000 files, 2 MB per file and 20 MB total. Importing enables preview; execution still needs a supported manifest.
 
-Your project list survives refreshes. Selecting a project loads its declared metrics; completed normalized reports can be reopened and downloaded from **Saved reports**.
+Your project list survives refreshes. Selecting a project loads its declared metrics. If its evaluations live in subfolders, choose one from **Evaluation project**. Completed reports can be reopened and downloaded from **Saved reports**. Importing arbitrary source does not create a dataset or an F1 benchmark: execution needs a supported evaluation manifest and compatible dependencies.
 
 Choose **Try a guided demo** for an immediately runnable ML or HTTP example. Goal presets explain what better means, while optional targets and correctness limits stay out of the way until needed.
 
-**GitHub sign-in:** `/login` explains the one-time OAuth setup. Add the client ID, client secret and allowed GitHub logins to your ignored `.env`; restart to enable sign-in and account-scoped workspaces. With OAuth unconfigured, local demo mode remains available. See [setup, metric explanations and import limits](docs/ONBOARDING.md).
+**GitHub sign-in:** configure the client ID, client secret and approved GitHub logins in your ignored local `.env`, or in **Render → Environment** for the deployed app, then restart/redeploy. `/login` shows the correct callback for that installation. Local demo access is available only in local mode; the public workbench requires sign-in. See [connection setup and verification](docs/CONNECTIONS.md) and [metric explanations and import limits](docs/ONBOARDING.md).
 
 ## Supported benchmarks
 
@@ -135,10 +135,10 @@ python -m ruff check .
 python -m ruff format --check backend
 python -m mypy backend/ml_analyser
 python -m pytest --cov=ml_analyser --cov-report=term-missing --cov-fail-under=90
-node --test frontend/metrics.test.js frontend/analytics.test.js frontend/onboarding.test.js frontend/history.test.js frontend/landing.test.js
+node --test frontend/*.test.js
 ```
 
-Latest local validation: **149 Linux tests passed, 93.62% coverage; 20 frontend tests passed.** See [commands, results and file inventory](docs/IMPLEMENTATION_VALIDATION.md). CI also checks JavaScript syntax.
+Latest validation: **176 Linux tests passed, 94.27% coverage; 25 frontend tests passed.** A live Nebius test imported this public repository and measured classifier F1 **0.667 → 1.000** on its small fixture dataset, with recall/accuracy guardrails satisfied. This validates the integration, not generalization to other datasets. See [validation evidence](docs/IMPLEMENTATION_VALIDATION.md). CI also checks JavaScript syntax and the packaged container.
 
 ## Boundaries
 

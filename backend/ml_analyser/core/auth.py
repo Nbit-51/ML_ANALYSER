@@ -97,7 +97,12 @@ def account_settings(settings: Settings, user_id: str) -> Settings:
 def seed_demos(settings: Settings) -> None:
     source = Path(__file__).resolve().parents[3] / "workspaces"
     settings.workspace_root.mkdir(parents=True, exist_ok=True)
-    for name in ("ml-training-demo", "backend-benchmark-demo", "cli-benchmark-demo"):
+    for name in (
+        "ml-training-demo",
+        "ml-regression-demo",
+        "backend-benchmark-demo",
+        "cli-benchmark-demo",
+    ):
         target = settings.workspace_root / name
         if not target.exists() and (source / name).is_dir():
             shutil.copytree(

@@ -63,15 +63,23 @@ class Settings(BaseSettings):
 
     @property
     def auth_enabled(self) -> bool:
-        return bool(self.github_client_id or self.github_client_secret.get_secret_value())
+        return bool(
+            self.github_client_id.strip() or self.github_client_secret.get_secret_value().strip()
+        )
 
     @property
     def auth_ready(self) -> bool:
         return bool(
-            self.github_client_id
-            and self.github_client_secret.get_secret_value()
-            and self.github_allowed_users.strip()
+            self.github_client_id.strip()
+            and self.github_client_secret.get_secret_value().strip()
+            and self.github_allowed_logins
         )
+
+    @property
+    def github_allowed_logins(self) -> set[str]:
+        return {
+            item.strip().casefold() for item in self.github_allowed_users.split(",") if item.strip()
+        }
 
 
 @lru_cache

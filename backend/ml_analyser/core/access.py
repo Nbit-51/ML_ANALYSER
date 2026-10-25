@@ -48,7 +48,7 @@ class AccessMiddleware:
         scoped = settings
         if settings.deployment_mode == "judge" and protected and not settings.auth_ready:
             response = (
-                RedirectResponse("/lab", status_code=303)
+                RedirectResponse("/login", status_code=303)
                 if request.url.path == "/app"
                 else JSONResponse(
                     {"detail": "Public deployment runs the controlled lab only."}, 403
@@ -58,7 +58,7 @@ class AccessMiddleware:
             return
         if settings.auth_enabled and protected:
             user = AuthStore(settings.auth_database).user(request.cookies.get("ml_session", ""))
-            allowed = {item.strip().casefold() for item in settings.github_allowed_users.split(",")}
+            allowed = settings.github_allowed_logins
             if not settings.auth_ready or not user or user["login"].casefold() not in allowed:
                 response = (
                     RedirectResponse("/login", status_code=303)

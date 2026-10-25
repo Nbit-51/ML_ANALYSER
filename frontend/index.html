@@ -62,6 +62,12 @@
       <p class="help-text">A source copy is stored on this app's server; originals stay unchanged. Common credential files, dependency folders and generated files are excluded. Review your selection for secrets in source code. Limit: 1,000 files, 2 MB each, 20 MB total. Private GitHub URLs are not fetched; choose your local clone instead.</p>
       </details>
       <div id="project-readiness" class="hidden" aria-live="polite"></div>
+      <div id="benchmark-project-field" class="project-library hidden">
+        <label class="field" for="benchmark-project">Evaluation project
+          <select id="benchmark-project"></select>
+        </label>
+        <p class="help-text">This repository includes evaluation settings in subfolders. Select one to load its metrics, or keep the repository root for the overview.</p>
+      </div>
       <p id="import-status" class="import-status" role="status">No repository selected yet.</p>
       <p id="import-error" class="error-box hidden" role="alert"></p>
       <form id="analysis-form" class="analysis-form">

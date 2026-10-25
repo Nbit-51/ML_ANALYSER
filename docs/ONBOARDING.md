@@ -26,8 +26,8 @@ Presets select an exact metric and direction and explain the scale. Custom metri
 ## Configure GitHub sign-in
 
 1. Create a GitHub OAuth App in [Developer settings](https://github.com/settings/developers).
-2. For local use, set the homepage to `http://127.0.0.1:8000` and callback URL to `http://127.0.0.1:8000/api/v1/auth/callback`.
-3. Add these values to your existing ignored `.env` without replacing your Nebius settings:
+2. Use the homepage and callback displayed on that installation's `/login` page. For the deployed app these are `https://ml-analyser.onrender.com` and `https://ml-analyser.onrender.com/api/v1/auth/callback`. Local development uses `http://127.0.0.1:8000` and its `/api/v1/auth/callback`. Use separate OAuth applications when switching installations. Keep wildcard matching and Device Flow disabled.
+3. Add the values below to **Render → Environment** for hosting, or your existing ignored `.env` for local development. Set `ML_ANALYSER_APP_URL` to that installation's origin; do not replace your Nebius settings:
 
 ```dotenv
 ML_ANALYSER_APP_URL=http://127.0.0.1:8000
@@ -36,11 +36,11 @@ ML_ANALYSER_GITHUB_CLIENT_SECRET=your-client-secret
 ML_ANALYSER_GITHUB_ALLOWED_USERS=your-github-login
 ```
 
-4. Restart the API, open `/login`, and select **Continue with GitHub**. Use the same hostname and port as `ML_ANALYSER_APP_URL` throughout the flow. List multiple approved logins separated by commas if needed. Keep this allowlist limited to people you trust to run local code.
+4. Restart/redeploy, open `/login`, and select **Continue with GitHub**. Use the same hostname and port as `ML_ANALYSER_APP_URL` throughout the flow. List multiple approved logins separated by commas if needed. Keep this allowlist limited to people you trust to run code. Changing a local `.env` does not update Render. See [connection verification](CONNECTIONS.md).
 
 The flow follows [GitHub's OAuth authorization-code protocol](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps), uses one-time browser-bound state and PKCE, and requests public identity without private-repository scopes. The temporary GitHub access token is discarded after reading identity. Sessions use opaque random cookies (HttpOnly, SameSite=Lax, Secure on HTTPS), with only token hashes stored server-side. Sessions expire after eight hours and sign-out revokes them.
 
-Configuring either client credential enables the authentication boundary immediately; incomplete configuration fails closed. With both credentials blank, the existing local demo mode remains available. Do not expose demo mode publicly. GitHub sign-in is implemented and protocol-tested; a real OAuth round trip needs your registered client credentials.
+Configuring either client credential enables the authentication boundary immediately; incomplete configuration fails closed. With both credentials blank, demo access is available only in local mode. In hosted judge mode, `/app` redirects to `/login` until authenticated. GitHub sign-in is protocol-tested; configuration presence does not establish that a real OAuth round trip succeeded.
 
 ## Account storage and boundaries
 
@@ -53,6 +53,8 @@ Cross-origin write requests and unexpected Host headers are denied. Upload bodie
 The project selector lists managed workspace folders and imported source copies. New imports retain a friendly name, origin and import time in the account's SQLite database. Existing copies remain discoverable by folder name. Missing or symlinked project directories are not listed. The UI lists at most 100 folders; manually entered managed paths remain available for other projects.
 
 Selecting a project calls the read-only `/api/v1/repositories/details` endpoint. Valid manifests contribute typed metric definitions, units and declared directions; the HTTP adapter supplies its known definitions. A custom metric with no declared direction requires an explicit choice. Invalid manifests do not offer executable goals. Reading these settings runs neither project code nor model reasoning.
+
+When manifests are nested, **Evaluation project** lists up to 12 discovered evaluation folders from the first 1,000 inventoried files. Select the folder containing the intended manifest before previewing. Standard classification metrics (F1, accuracy, precision and recall) use **higher is better**; custom metrics retain their declared direction. For this repository, import its public URL and select `workspaces/ml-training-demo` for the classifier or `workspaces/ml-regression-demo` for RMSE. The manifest and dataset define the task; a repository URL alone cannot define meaningful F1.
 
 `/api/v1/runs/history` lists the latest 20 normalized, completed reports from persisted evidence. **Open report** loads its stored measurements, and **Download report JSON** exports the displayed report. Preview-only runs and legacy endpoints that did not produce normalized reports are not included. Older normalized snapshots missing the lineage graph reconstruct it from their stored experiments and measurements; their evidence records remain unchanged. Libraries and report history use the same per-account storage boundary as execution.
 

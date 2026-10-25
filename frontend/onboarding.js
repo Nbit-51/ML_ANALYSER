@@ -124,11 +124,16 @@ if (typeof document !== "undefined") {
     select.append(group);
     updateGoal();
   }
-  async function inspectProject(path) {
+  async function inspectProject(path, keepBenchmarkChoices = false) {
     const version = ++selectionVersion;
     invalidate();
     byId("analysis-path").value = path;
     byId("project-readiness").classList.add("hidden");
+    if (!keepBenchmarkChoices) {
+      byId("benchmark-project-field").classList.add("hidden");
+      byId("benchmark-project").replaceChildren();
+      if (path) sessionStorage.setItem("ml-analyser-library-project", path);
+    }
     // Clear old declarations immediately; a failed load must not reuse another project's metrics.
     renderGoals([]);
     if (!path) { sessionStorage.removeItem("ml-analyser-project"); return; }
@@ -137,6 +142,17 @@ if (typeof document !== "undefined") {
     try {
       const data = await repositoryApi(`/details?project_path=${encodeURIComponent(path)}`);
       if (version !== selectionVersion) return;
+      if (!keepBenchmarkChoices && data.benchmark_projects?.length) {
+        const select = byId("benchmark-project");
+        const rootOption = document.createElement("option");
+        rootOption.value = path; rootOption.textContent = "Repository root"; select.append(rootOption);
+        for (const project of data.benchmark_projects) {
+          const option = document.createElement("option"); option.value = project.project_path;
+          option.textContent = project.display_name; select.append(option);
+        }
+        select.value = path;
+        byId("benchmark-project-field").classList.remove("hidden");
+      }
       renderGoals(data.adapters);
       const box = byId("project-readiness");
       box.replaceChildren(); box.classList.remove("hidden");
@@ -165,10 +181,17 @@ if (typeof document !== "undefined") {
         select.append(option);
       }
       byId("library-status").textContent = projects.length ? `${projects.length} projects in your workspace. Select one to continue.` : "No saved projects yet. Import a repository below.";
-      const previous = selectPath || byId("analysis-path").value || sessionStorage.getItem("ml-analyser-project");
+      const previous = selectPath || sessionStorage.getItem("ml-analyser-library-project") || byId("analysis-path").value || sessionStorage.getItem("ml-analyser-project");
       if (projects.some(project => project.project_path === previous)) {
         select.value = previous;
-        if (selectPath || !byId("analysis-path").value) await inspectProject(previous);
+        if (selectPath || !byId("analysis-path").value) {
+          const savedEvaluation = selectPath ? null : sessionStorage.getItem("ml-analyser-project");
+          await inspectProject(previous);
+          if (savedEvaluation && Array.from(byId("benchmark-project").options).some(option => option.value === savedEvaluation)) {
+            byId("benchmark-project").value = savedEvaluation;
+            await inspectProject(savedEvaluation, true);
+          }
+        }
         byId("new-project-options").open = false;
       }
     } catch (error) { byId("library-status").textContent = error.message; }
@@ -180,6 +203,7 @@ if (typeof document !== "undefined") {
     byId("new-project-options").open = !event.target.value;
   });
   byId("refresh-projects").addEventListener("click", () => refreshProjects());
+  byId("benchmark-project").addEventListener("change", event => inspectProject(event.target.value, true));
   byId("analysis-path").addEventListener("change", event => inspectProject(event.target.value.trim()));
   refreshProjects();
   async function importFiles(kind, payload, label) {

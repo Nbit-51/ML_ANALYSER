@@ -11,7 +11,7 @@ from pathlib import Path
 from pydantic import Field, field_validator
 
 from ml_analyser.adapters.process import unique_json
-from ml_analyser.agent.models import MetadataValue, MetricDefinition, StrictModel
+from ml_analyser.agent.models import MetadataValue, MetricDefinition, MetricDirection, StrictModel
 
 MANIFEST_NAME = "ml_experiment.json"
 SUPPORTED_METRICS = frozenset({"accuracy", "f1", "precision", "recall"})
@@ -30,7 +30,9 @@ class MlTrainingManifest(StrictModel):
     timeout_seconds: int = Field(default=20, ge=1, le=120)
     metric_definitions: list[MetricDefinition] = Field(
         default_factory=lambda: [
-            MetricDefinition(name=name, unit="ratio", minimum=0, maximum=1)
+            MetricDefinition(
+                name=name, unit="ratio", minimum=0, maximum=1, direction=MetricDirection.MAXIMIZE
+            )
             for name in sorted(SUPPORTED_METRICS)
         ]
     )

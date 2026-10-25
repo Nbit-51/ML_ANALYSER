@@ -7,8 +7,15 @@ from pydantic import BaseModel
 
 from ml_analyser import __version__
 from ml_analyser.core.config import get_settings
+from ml_analyser.core.connections import ConnectionSummary, connection_summary
 
 router = APIRouter(tags=["health"])
+
+
+@router.get("/connections", response_model=ConnectionSummary)
+def connections() -> ConnectionSummary:
+    """Report presence of required settings; never return secret values."""
+    return connection_summary(get_settings())
 
 
 class HealthResponse(BaseModel):

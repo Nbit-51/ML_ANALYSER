@@ -46,6 +46,10 @@ class AdapterRegistry:
             raise ValueError(f"unsupported adapter: {name}")
         return self._adapters[name]
 
+    @property
+    def manifest_names(self) -> frozenset[str]:
+        return frozenset(entry.manifest_name for entry in self._adapters.values())
+
     def describe(self, root: Path) -> list[AdapterReadiness]:
         readiness = []
         languages = {item.language for item in RepositoryInventoryTool().inspect(str(root)).files}

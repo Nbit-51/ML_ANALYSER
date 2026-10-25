@@ -111,6 +111,11 @@ jobs:
           done
           docker exec -i ml-analyser-judge python - <<'PY'
           import httpx
+          from pathlib import Path
+          from tempfile import TemporaryDirectory
+          from ml_analyser.adapters.ml_training import MlTrainingAdapter
+          from ml_analyser.core.auth import account_settings, seed_demos
+          from ml_analyser.core.config import Settings
           from ml_analyser.lab.engine import replay
 
           with httpx.Client(base_url="http://127.0.0.1:8000") as client:
@@ -127,6 +132,20 @@ jobs:
               assert replay(result.json()) == []
               example = client.get("/static/examples/cache-capsule-live.json").json()
               assert replay(example) == []
+          # Verify fixtures really shipped and run under the image's nonroot user.
+          with TemporaryDirectory() as directory:
+              settings = Settings(_env_file=None, auth_database=Path(directory) / "auth.db")
+              account = account_settings(settings, "123")
+              seed_demos(account)
+              root = account.workspace_root / "ml-training-demo"
+              assert (root / "train.csv").is_file()
+              assert (account.workspace_root / "ml-regression-demo" / "train.py").is_file()
+              adapter = MlTrainingAdapter()
+              manifest = adapter.load_manifest(root)
+              baseline = adapter.measure(root, manifest)
+              adapter.apply_candidate(root, manifest)
+              candidate = adapter.measure(root, manifest)
+              assert candidate.metrics["f1"] > baseline.metrics["f1"]
           PY
       - name: Container logs
         if: always()

@@ -74,7 +74,7 @@ compatible native build systems.
 ## Access and secrets
 
 The public lab requires no judge account. The full repository workbench requires an
-explicit, ready GitHub OAuth setup in judge mode; otherwise `/app` redirects to `/lab`
+explicit, ready GitHub OAuth setup in judge mode; otherwise `/app` redirects to `/login`
 and repository/run APIs return 403. Keep imported code execution on a controlled
 installation. This image is not a production hostile-code worker.
 
@@ -82,3 +82,8 @@ Actual `.env`, credentials, artifacts, test databases and local workspaces must 
 uploaded. The Docker context uses an allowlist and explicit `COPY` instructions. Hosting
 credentials are separate from the Nebius inference key; a Token Factory key cannot
 authorize deployment to Render, Koyeb or Nebius Cloud.
+
+Follow [connection setup and verification](CONNECTIONS.md) to connect GitHub and Nebius.
+`/api/v1/connections` exposes configuration readiness without returning credential values.
+The container also ships the four account starter fixtures; CI executes the packaged
+classifier as the image's nonroot user rather than checking only the public lab.
