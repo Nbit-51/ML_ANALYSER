@@ -1,7 +1,11 @@
 # ML Analyser
 
-**License:** [Free use; permission required for code changes and redistribution](LICENSE).
-This is source-available, **not open source**. [Hackathon eligibility implications](docs/LICENSING_DECISION.md).
+**License:** [GNU AGPLv3](LICENSE) for original ML Analyser code, with a narrow
+[GSAP linking permission and third-party notices](NOTICE.md).
+
+**Try it:** [Counterexample Lab](https://ml-analyser.onrender.com/lab) ·
+[Prediction Comparison](https://ml-analyser.onrender.com/evaluate) ·
+[Demo video](https://www.youtube.com/watch?v=pIJEN7S9128).
 
 [![CI](https://github.com/Nbit-51/ML_ANALYSER/actions/workflows/ci.yml/badge.svg)](https://github.com/Nbit-51/ML_ANALYSER/actions/workflows/ci.yml)
 

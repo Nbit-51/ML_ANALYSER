@@ -9,8 +9,10 @@ replays without credentials. UI labels distinguish fresh, recorded and scripted 
 Judge mode restricts repository execution, and live demo quotas default to zero.
 Render native Python and a portable nonroot Dockerfile are supplied; local Docker Desktop
 startup failed, so image validation is delegated to the configured CI smoke job.
-See the lab/deployment documentation. The owner selected a permission-required,
-source-available license after being told it conflicts with hackathon open-source rules.
+See the lab/deployment documentation. On October 26 the owner approved switching
+the current release to AGPLv3, superseding the prior permission-required decision.
+The full license, GSAP linking permission and third-party notices are at LICENSE
+and NOTICE.md. See docs/LICENSING_DECISION.md.
 Deployment and submission must not be described as complete until independently verified.
 
 ## Product intent

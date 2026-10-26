@@ -1,26 +1,28 @@
 # License decision
 
-On October 25, the owner chose **free public use with permission required for
-modifications and redistribution**, accepting that this conflicts with the event's
-open-source requirement. The project therefore uses the root **ML Analyser Free Use
-License**, a custom source-available license. Do not label it MIT, AGPL, or open source.
+On October 26, 2026, the owner explicitly approved switching the current release
+to **GNU AGPLv3** and continuing the hackathon submission. This supersedes the earlier
+October 25 decision to keep permission-required terms for the current release.
 
-The license allows source inspection, download and necessary copies to run the
-unmodified app for personal, educational, evaluation or internal business use.
-Documented runtime configuration remains permitted. Redistribution, rebranding,
-public hosted copies and derivative code require prior written permission, subject to
-applicable law and any independent platform rights. It grants no free third-party
-inference credits and promises no perpetual hosted service.
+The root [LICENSE](../LICENSE) contains the unmodified GNU AGPL version 3 text.
+[NOTICE.md](../NOTICE.md) applies AGPL-3.0-only to original ML Analyser code,
+documentation and assets, states the copyright notice, and preserves third-party terms.
 
-Public GitHub repositories can still be viewed and forked through GitHub's functionality
-under its terms. A project license cannot disable copying technically or override
-platform-granted rights. See [GitHub's licensing guidance](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/licensing-a-repository).
+Because the landing page uses GSAP's separately licensed animation library, NOTICE.md
+includes a narrow additional permission under AGPL section 7 to link or combine with
+the pinned GSAP 3.13.0 and ScrollTrigger. This does not relicense GSAP or grant rights
+that its own terms do not provide. Three.js retains its MIT license.
 
-The [Open Source Definition](https://opensource.org/osd), especially sections 1 and 3,
-requires redistribution and modification rights. The
-[Nebius event requirements](https://nebiusglobalaihackathon.devpost.com/) require an
-open-source license. This project must not be described as satisfying that condition
-under its current license. Organizer acceptance of an exception has not been obtained.
+AGPL permits use, copying, modification, redistribution and commercial use subject to
+its conditions. It does not require the author's permission for every modification.
+Modified network-accessible versions must offer their corresponding source as required
+by section 13. The license does not promise free inference credits, unlimited hosting,
+support or perpetual service availability.
 
-Vendor files retain their own licenses. The custom project license does not relicense
-Three.js, GSAP, Python dependencies or any other third-party component.
+The previous custom license remains part of Git history; it no longer describes the
+license offered for the current release. No third-party source or license header was
+changed as part of this decision.
+
+References: [GNU AGPLv3](https://www.gnu.org/licenses/agpl-3.0.html),
+[OSI AGPL-3.0 entry](https://opensource.org/license/agpl-v3), and the
+[event rules](https://nebiusglobalaihackathon.devpost.com/rules).

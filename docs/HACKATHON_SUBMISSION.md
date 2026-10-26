@@ -4,10 +4,20 @@ Official event: https://nebiusglobalaihackathon.devpost.com/
 Deadline: October 30, 2026, 10:00 a.m. PDT / 10:30 p.m. IST.
 Recommended track: **Coding and Agentic Engineering**.
 
-**Eligibility blocker:** the owner selected permission-required, source-available
-terms. These are not an open-source license and conflict with the event's published
-requirement. Do not submit this draft as meeting that requirement. No organizer
-exception has been obtained. See [the license decision](LICENSING_DECISION.md).
+**Current license:** GNU AGPLv3 for original project code, with a narrow GSAP
+linking permission and retained third-party notices. The owner approved this switch
+on October 26. See [the license decision](LICENSING_DECISION.md) and [NOTICE](../NOTICE.md).
+
+**Public links:**
+
+- Application: https://ml-analyser.onrender.com/
+- Counterexample Lab: https://ml-analyser.onrender.com/lab
+- Prediction Comparison: https://ml-analyser.onrender.com/evaluate
+- Repository: https://github.com/Nbit-51/ML_ANALYSER
+- Owner-provided demo video: https://www.youtube.com/watch?v=pIJEN7S9128
+
+The owner reports the video has been recorded and uploaded. Verify its public visibility
+and length separately; recording and uploading are not evidence that Devpost is submitted.
 
 ## Pitch
 
@@ -27,6 +37,13 @@ In the captured live run, the model's candidate reduced reference lookups from 1
 30, while preserving all prices. The deliberately unsafe product-only control performs
 even fewer lookups but fails on 100 queries. Work counts are synthetic measurements;
 we claim neither a production latency improvement nor measured dollar savings.
+
+Prediction Comparison adds framework-independent evaluation of supplied predictions.
+Developers upload paired actual/baseline/candidate rows; deterministic calculations
+produce classifier or regression metrics, cohort checks and an approximate paired
+bootstrap interval. Its hidden-regression example improves overall accuracy from
+78% to 90% while mobile accuracy falls from 90% to 60%, triggering rejection.
+These are synthetic example predictions; the page does not train or run models.
 
 The broader local workbench imports repositories, inventories capabilities, grounds
 hypotheses in evidence, and executes declared ML/HTTP/process benchmarks after exact
@@ -61,10 +78,11 @@ the impact claim. A finish or prize cannot be predicted from code quality alone.
 
 ## Items the owner must complete before submitting
 
-- Replace this draft's missing demo URL with a verified public deployment.
-- Record and upload a public YouTube demo of at most three minutes.
-- Resolve the license conflict before claiming eligibility; provide the repository
-  and setup instructions accurately under the terms actually chosen.
+- Check the public deployment links above and ensure the public workflows remain
+  available through the judging period, December 1–15, 2026.
+- Confirm the uploaded YouTube video is public and under three minutes.
+- Confirm GitHub detects the AGPLv3 LICENSE and retains the setup instructions,
+  original-code notice, GSAP linking permission and third-party license files.
 - Complete feedback on Nebius and NVIDIA tools using actual experience. Observed:
   live source-grounded hypothesis and cache proposals worked; typed validation was useful;
   long reasoning responses make visible progress/wait states important. Do not invent
